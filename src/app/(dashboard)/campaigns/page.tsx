@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreHorizontal, Loader2 } from "lucide-react";
+import { Plus, MoreHorizontal, Loader2, Copy, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -67,63 +68,90 @@ export default function CampaignsPage() {
             </div>
 
             <Card>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Campaign Name</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Recipients</TableHead>
-                                <TableHead>Open Rate</TableHead>
-                                <TableHead className="text-right">Date</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : campaigns.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                        No campaigns yet. Create your first one to get started!
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                campaigns.map((c) => (
-                                    <TableRow key={c.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{c.name}</div>
-                                            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{c.subject}</div>
-                                        </TableCell>
-                                        <TableCell>{getStatusBadge(c.status)}</TableCell>
-                                        <TableCell>{c.recipients_count || '-'}</TableCell>
-                                        <TableCell>{c.open_rate ? `${c.open_rate}%` : '-'}</TableCell>
-                                        <TableCell className="text-right text-muted-foreground text-sm">
-                                            {new Date(c.created_at).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                                                    <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                <CardContent className="p-6">
+                    <Tabs defaultValue="all" className="w-full">
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="all">All Campaigns</TabsTrigger>
+                            <TabsTrigger value="sent">Sent</TabsTrigger>
+                            <TabsTrigger value="draft">Drafts</TabsTrigger>
+                            <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+                        </TabsList>
+
+                        {["all", "sent", "draft", "scheduled"].map((tab) => (
+                            <TabsContent key={tab} value={tab}>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Campaign Name</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Recipients</TableHead>
+                                            <TableHead>Open Rate</TableHead>
+                                            <TableHead className="text-right">Date</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {isLoading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="h-24 text-center">
+                                                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : campaigns.filter(c => tab === 'all' || c.status === tab).length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                                                    No {tab === 'all' ? '' : tab} campaigns found.
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            campaigns
+                                                .filter(c => tab === 'all' || c.status === tab)
+                                                .map((c) => (
+                                                    <TableRow key={c.id}>
+                                                        <TableCell>
+                                                            <div className="font-medium">{c.name}</div>
+                                                            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{c.subject || '(No subject)'}</div>
+                                                        </TableCell>
+                                                        <TableCell>{getStatusBadge(c.status)}</TableCell>
+                                                        <TableCell>{c.recipients_count || '-'}</TableCell>
+                                                        <TableCell>{c.open_rate ? `${c.open_rate}%` : '-'}</TableCell>
+                                                        <TableCell className="text-right text-muted-foreground text-sm">
+                                                            {new Date(c.created_at).toLocaleDateString()}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    {c.status === 'draft' ? (
+                                                                        <DropdownMenuItem asChild>
+                                                                            <Link href={`/campaigns/new?draft_id=${c.id}`}>
+                                                                                <Pencil className="mr-2 h-4 w-4" /> Edit Draft
+                                                                            </Link>
+                                                                        </DropdownMenuItem>
+                                                                    ) : (
+                                                                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                                                                    )}
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/campaigns/new?source_campaign_id=${c.id}`}>
+                                                                            <Copy className="mr-2 h-4 w-4" /> Reuse / Duplicate
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </TabsContent>
+                        ))}
+                    </Tabs>
                 </CardContent>
             </Card>
         </div>

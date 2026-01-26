@@ -4,18 +4,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Loader2, Wand2 } from "lucide-react";
-import { generateEmailContent } from "@/lib/ai/generator-simulator";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AiAssistantProps {
     onInsert: (content: string) => void;
     onSubjectGenerate?: (subject: string) => void;
+    fromName?: string;
 }
 
-export function AiAssistant({ onInsert, onSubjectGenerate }: AiAssistantProps) {
+export function AiAssistant({ onInsert, onSubjectGenerate, fromName }: AiAssistantProps) {
     const [prompt, setPrompt] = useState("");
     const [tone, setTone] = useState<'formal' | 'friendly' | 'persuasive' | 'neutral'>("neutral");
     const [isLoading, setIsLoading] = useState(false);
@@ -29,15 +28,35 @@ export function AiAssistant({ onInsert, onSubjectGenerate }: AiAssistantProps) {
 
         setIsLoading(true);
         try {
-            const content = await generateEmailContent({ prompt, tone, type });
+            const res = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt,
+                    tone,
+                    type,
+                    fromName
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                if (data.needsSetup) {
+                    toast.error("AI service not configured on server.");
+                    return;
+                }
+                throw new Error(data.error || "Generation failed");
+            }
+
             if (type === 'subject' && onSubjectGenerate) {
-                onSubjectGenerate(content);
+                onSubjectGenerate(data.content);
                 toast.success("Subject line generated!");
             } else {
-                setGeneratedContent(content);
+                setGeneratedContent(data.content);
             }
-        } catch (err) {
-            toast.error("Failed to generate content");
+        } catch (err: any) {
+            toast.error(err.message);
         } finally {
             setIsLoading(false);
         }
@@ -46,17 +65,19 @@ export function AiAssistant({ onInsert, onSubjectGenerate }: AiAssistantProps) {
     const handleInsert = () => {
         onInsert(generatedContent);
         setGeneratedContent("");
-        toast.success("Content inserted into editor");
+        toast.success("Content inserted");
     };
 
     return (
         <div className="h-full flex flex-col border-l bg-muted/10 w-80">
-            <div className="p-4 border-b bg-background/50 backdrop-blur">
-                <h3 className="font-semibold flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                    AI Assistant
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">Powered by DeepSeek</p>
+            <div className="p-4 border-b bg-background/50 backdrop-blur flex justify-between items-center">
+                <div>
+                    <h3 className="font-semibold flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-purple-500" />
+                        AI Assistant
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Powered by Groq</p>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

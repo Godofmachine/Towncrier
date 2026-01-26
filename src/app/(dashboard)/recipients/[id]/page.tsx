@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, Save } from "lucide-react";
@@ -9,7 +9,8 @@ import { RecipientForm } from "@/components/recipients/recipient-form";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
-export default function EditRecipientPage({ params }: { params: { id: string } }) {
+export default function EditRecipientPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: recipientId } = use(params);
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -21,7 +22,7 @@ export default function EditRecipientPage({ params }: { params: { id: string } }
             const { data, error } = await supabase
                 .from('recipients')
                 .select('*')
-                .eq('id', params.id)
+                .eq('id', recipientId)
                 .single();
 
             if (error) {
@@ -35,7 +36,7 @@ export default function EditRecipientPage({ params }: { params: { id: string } }
         };
 
         fetchContact();
-    }, [params.id, router, supabase]);
+    }, [recipientId, router, supabase]);
 
     const handleUpdate = async (data: any) => {
         setIsSaving(true);
@@ -49,7 +50,7 @@ export default function EditRecipientPage({ params }: { params: { id: string } }
                     custom_fields: data.custom_fields,
                     tags: data.tags
                 })
-                .eq('id', params.id);
+                .eq('id', recipientId);
 
             if (error) throw error;
 

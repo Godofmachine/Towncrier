@@ -1,13 +1,23 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail } from "lucide-react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AuthLayout({
+export default async function AuthLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    // Check if user is already authenticated
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Redirect to dashboard if already logged in
+    if (user) {
+        redirect('/dashboard');
+    }
+
     return (
         <div className="min-h-screen grid lg:grid-cols-2">
             {/* Left Side - Hero/Branding */}

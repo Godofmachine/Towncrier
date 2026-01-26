@@ -1,9 +1,10 @@
 "use client";
 
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useState } from "react";
 
 export function MobileNav() {
@@ -18,6 +19,9 @@ export function MobileNav() {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-72">
+                <VisuallyHidden>
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                </VisuallyHidden>
                 <Sidebar className="border-none h-full" />
             </SheetContent>
         </Sheet>

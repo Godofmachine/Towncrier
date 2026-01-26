@@ -19,11 +19,22 @@ import { createClient } from "@/lib/supabase/client";
 
 interface QuickAddRecipientProps {
     onSuccess: (newRecipient: any) => void;
+    children?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function QuickAddRecipientDialog({ onSuccess }: QuickAddRecipientProps) {
-    const [open, setOpen] = useState(false);
+export function QuickAddRecipientDialog({ onSuccess, children, open, onOpenChange }: QuickAddRecipientProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    const isControlled = open !== undefined;
+    const isOpen = isControlled ? open : internalOpen;
+    const handleOpenChange = (val: boolean) => {
+        if (isControlled && onOpenChange) onOpenChange(val);
+        else setInternalOpen(val);
+    };
+
     const [formData, setFormData] = useState({
         email: "",
         first_name: "",
@@ -68,7 +79,10 @@ export function QuickAddRecipientDialog({ onSuccess }: QuickAddRecipientProps) {
 
             toast.success("Recipient added successfully");
             onSuccess(data);
-            setOpen(false);
+            toast.success("Recipient added successfully");
+            onSuccess(data);
+            handleOpenChange(false);
+            setFormData({ email: "", first_name: "", last_name: "" });
             setFormData({ email: "", first_name: "", last_name: "" });
             setCustomFields([{ key: "company", value: "" }]); // Reset
         } catch (error: any) {
@@ -79,11 +93,13 @@ export function QuickAddRecipientDialog({ onSuccess }: QuickAddRecipientProps) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8">
-                    <Plus className="mr-2 h-3 w-3" /> Add New
-                </Button>
+                {children || (
+                    <Button variant="ghost" size="sm" className="h-8">
+                        <Plus className="mr-2 h-3 w-3" /> Add New
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>

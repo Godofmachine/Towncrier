@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         // In production, use a queue (BullMQ/Inngest)
         for (const recipient of recipients) {
             // Simple personalization placeholder replacement
-            let personalizedContent = content
+            const personalizedContent = content
                 .replace(/{{first_name}}/g, recipient.first_name || '')
                 .replace(/{{last_name}}/g, recipient.last_name || '')
                 .replace(/{{email}}/g, recipient.email || '')

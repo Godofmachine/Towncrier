@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckCircle2, ChevronRight, ChevronLeft, Save, Clock, Send, Users, Search, Plus, Upload, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Save, Clock, Send, Users, Search, Plus, Upload, Loader2, AlertTriangle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useDebouncedCallback } from "use-debounce";
 import { ImportDialog } from "@/components/recipients/import-dialog";
 import { QuickAddRecipientDialog } from "@/components/recipients/quick-add-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -20,14 +22,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 
-export default function NewCampaignPage() {
+function CampaignEditor() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const sourceCampaignId = searchParams.get('source_campaign_id');
+    const draftId = searchParams.get('draft_id');
+
+    // State
     const [step, setStep] = useState(1);
     const [date, setDate] = useState<Date>();
+    const [campaignId, setCampaignId] = useState<string | null>(draftId);
+    const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+
     const supabase = createClient();
 
     // Form State
     const [name, setName] = useState("");
+    const [fromName, setFromName] = useState("John Doe");
     const [subject, setSubject] = useState("");
     const [content, setContent] = useState("");
     const [recipientType, setRecipientType] = useState("all");
@@ -46,6 +57,86 @@ export default function NewCampaignPage() {
     // Groups State
     const [groups, setGroups] = useState<any[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+
+    // Auto-Save Logic (1.5s debounce)
+    const autoSave = useDebouncedCallback(async () => {
+        if (!name && !subject && !content) return; // Don't save completely empty drafts initially
+
+        setSaveStatus('saving');
+
+        try {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) return;
+
+            const payload = {
+                name: name || 'Untitled Campaign',
+                subject,
+                content,
+                status: 'draft',
+                user_id: user.id
+            };
+
+            let data, error;
+
+            if (campaignId) {
+                // Update existing
+                const res = await supabase.from('campaigns').update(payload).eq('id', campaignId).select().single();
+                data = res.data;
+                error = res.error;
+            } else {
+                // Instert new
+                const res = await supabase.from('campaigns').insert(payload).select().single();
+                data = res.data;
+                error = res.error;
+                if (data) setCampaignId(data.id);
+            }
+
+            if (error) throw error;
+            setSaveStatus('saved');
+        } catch (err) {
+            console.error("Auto-save failed:", err);
+            setSaveStatus('unsaved');
+        }
+    }, 1500);
+
+    // Trigger auto-save on change
+    useEffect(() => {
+        if (name || subject || content) {
+            setSaveStatus('unsaved');
+            autoSave();
+        }
+    }, [name, subject, content, autoSave]);
+
+
+    // Load Draft OR Source Campaign
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            const idToFetch = draftId || sourceCampaignId;
+            if (!idToFetch) return;
+
+            const { data, error } = await supabase
+                .from('campaigns')
+                .select('*')
+                .eq('id', idToFetch)
+                .single();
+
+            if (data) {
+                if (draftId) {
+                    // Editing duplicate/draft
+                    setName(data.name);
+                } else {
+                    // Copying
+                    setName(`${data.name} (Copy)`);
+                }
+                setSubject(data.subject || '');
+                setContent(data.content || '');
+                toast.info(draftId ? "Draft loaded" : "Content loaded from previous campaign");
+            }
+        };
+        fetchInitialData();
+    }, [draftId, sourceCampaignId, supabase]);
+
+
 
     // Fetch contacts when "Specific" is selected
     useEffect(() => {
@@ -241,10 +332,26 @@ export default function NewCampaignPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in-50 duration-500 pb-20">
-            {/* Headers and Steps preserved above... */}
-
-            {/* ... */}
-
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-3xl font-bold tracking-tight">New Campaign</h2>
+                    <div className="flex items-center gap-2 h-5">
+                        <p className="text-muted-foreground text-sm">Create and schedule your email blast.</p>
+                        <span className="text-muted-foreground/30">|</span>
+                        <div className="text-sm font-medium">
+                            {saveStatus === 'saving' && <span className="flex items-center gap-1 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>}
+                            {saveStatus === 'saved' && <span className="text-green-600 dark:text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Draft Saved</span>}
+                            {saveStatus === 'unsaved' && <span className="text-amber-600 dark:text-amber-400">Unsaved changes...</span>}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href="/campaigns">Cancel</Link>
+                    </Button>
+                </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-12">
                     <Card className="min-h-[500px] flex flex-col">
@@ -258,12 +365,8 @@ export default function NewCampaignPage() {
                                         <Input placeholder="e.g. January Newsletter" value={name} onChange={e => setName(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Email Subject</Label>
-                                        <Input placeholder="Enter subject line..." value={subject} onChange={e => setSubject(e.target.value)} />
-                                    </div>
-                                    <div className="space-y-2">
                                         <Label>From Name</Label>
-                                        <Input placeholder="Your Name or Company" defaultValue="John Doe" />
+                                        <Input placeholder="Your Name or Company" value={fromName} onChange={e => setFromName(e.target.value)} />
                                     </div>
                                 </div>
                             )}
@@ -429,6 +532,24 @@ export default function NewCampaignPage() {
                                         </div>
                                     </div>
 
+                                    <div className="mb-4 space-y-2">
+                                        <Label>Subject Line</Label>
+                                        <Input
+                                            placeholder="Enter subject line..."
+                                            value={subject}
+                                            onChange={e => setSubject(e.target.value)}
+                                            className="font-medium"
+                                        />
+                                    </div>
+
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-4 flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300">
+                                        <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                        <p>
+                                            <strong>AI Assistance:</strong> Use the AI tool to draft content.
+                                            Please <span className="underline font-semibold">verify and edit</span> all AI-generated text before sending, specifically checking for correct dates and details.
+                                        </p>
+                                    </div>
+
                                     {attachments.length > 0 && (
                                         <div className="flex gap-2 flex-wrap mb-3 p-2 bg-muted/30 rounded-md">
                                             {attachments.map((file, idx) => (
@@ -449,6 +570,7 @@ export default function NewCampaignPage() {
                                         onChange={setContent}
                                         onSubjectGenerate={setSubject}
                                         onAttach={() => document.getElementById('attachment-upload')?.click()}
+                                        fromName={fromName}
                                         variables={(() => {
                                             // 1. Standard variables
                                             const baseVars = [
@@ -689,6 +811,14 @@ export default function NewCampaignPage() {
                     </Card>
                 </div>
             </div>
-        </div>
+        </div >
+    );
+}
+
+export default function NewCampaignPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-[50vh]"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+            <CampaignEditor />
+        </Suspense>
     );
 }

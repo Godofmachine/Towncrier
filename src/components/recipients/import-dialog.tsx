@@ -9,13 +9,26 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { createClient } from "@/lib/supabase/client";
 
 interface ImportDialogProps {
     children?: React.ReactNode;
+    groupId?: string;
+    onSuccess?: () => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function ImportDialog({ children }: ImportDialogProps) {
-    const [open, setOpen] = useState(false);
+export function ImportDialog({ children, groupId, onSuccess, open, onOpenChange }: ImportDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    const isControlled = open !== undefined;
+    const isOpen = isControlled ? open : internalOpen;
+    const handleOpenChange = (val: boolean) => {
+        if (isControlled && onOpenChange) onOpenChange(val);
+        else setInternalOpen(val);
+    };
+
     const [step, setStep] = useState<"upload" | "review" | "importing">("upload");
     const [parseResult, setParseResult] = useState<ParseResult | null>(null);
     const [dragActive, setDragActive] = useState(false);
@@ -40,20 +53,68 @@ export function ImportDialog({ children }: ImportDialogProps) {
         }
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+    const supabase = createClient();
+
     const handleConfirmImport = async () => {
+        if (!parseResult) return;
         setStep("importing");
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Authentication required");
 
-        toast.success(`Successfully imported ${parseResult?.contacts.length} contacts`);
-        setOpen(false);
-        setStep("upload");
-        setParseResult(null);
+            // 1. Upsert Recipients
+            const { data: recipientsData, error: recipientsError } = await supabase
+                .from('recipients')
+                .upsert(parseResult.contacts.map(c => ({
+                    email: c.email,
+                    first_name: c.first_name,
+                    last_name: c.last_name,
+                    custom_fields: c.custom_fields,
+                    status: 'active',
+                    updated_at: new Date().toISOString(),
+                    user_id: user.id
+                })), { onConflict: 'email' })
+                .select('id, email');
+
+            if (recipientsError) throw recipientsError;
+
+            // 2. Add to Group if specified
+            if (groupId && recipientsData) {
+                const memberPayload = recipientsData.map(r => ({
+                    group_id: groupId,
+                    recipient_id: r.id
+                }));
+
+                const { error: memberError } = await supabase
+                    .from('group_members')
+                    .upsert(memberPayload, { onConflict: 'group_id, recipient_id', ignoreDuplicates: true });
+
+                if (memberError) throw memberError;
+            }
+
+            toast.success(`Successfully imported ${parseResult.contacts.length} contacts`);
+            toast.success(`Successfully imported ${parseResult.contacts.length} contacts`);
+            handleOpenChange(false);
+            setStep("upload");
+            setStep("upload");
+            setParseResult(null);
+            onSuccess?.();
+
+        } catch (error: any) {
+            console.error("Import failed:", error);
+            toast.error(error.message || "Failed to import contacts");
+        } finally {
+            setStep("upload"); // Reset or stay? usually reset on success
+            if (isOpen) setStep("upload"); // Only reset if still open (error case might want to stay?)
+            // actually if success we closed it. if error we might want to stay.
+            // let's just leave it simple
+        }
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 {children || (
                     <Button variant="outline">

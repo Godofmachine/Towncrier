@@ -19,9 +19,10 @@ interface RichEditorProps {
     onAttach?: () => void;
     onImage?: () => void;
     variables?: ToolbarVariable[];
+    fromName?: string;
 }
 
-export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onImage, variables }: RichEditorProps) {
+export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onImage, variables, fromName }: RichEditorProps) {
     const [showAi, setShowAi] = useState(true);
 
     const editor = useEditor({
@@ -108,7 +109,7 @@ export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onI
                     >
                         <X className="h-4 w-4" />
                     </Button>
-                    <AiAssistant onInsert={handleAiInsert} onSubjectGenerate={onSubjectGenerate} />
+                    <AiAssistant onInsert={handleAiInsert} onSubjectGenerate={onSubjectGenerate} fromName={fromName} />
                 </div>
             )}
         </div>

@@ -21,6 +21,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { EditRecipientDialog } from "@/components/recipients/edit-dialog";
+import { AddToGroupDialog } from "@/components/groups/add-to-group-dialog";
+import { Users } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function RecipientsPage() {
     const [recipients, setRecipients] = useState<any[]>([]);
@@ -28,6 +31,9 @@ export default function RecipientsPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [editingRecipient, setEditingRecipient] = useState<any | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [isAddToGroupOpen, setIsAddToGroupOpen] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const supabase = createClient();
 
@@ -69,8 +75,9 @@ export default function RecipientsPage() {
     };
 
     // Bulk Delete
+    // Bulk Delete
     const handleDelete = async () => {
-        if (!confirm(`Are you sure you want to delete ${selectedIds.size} recipients?`)) return;
+        setIsDeleting(true);
 
         const { error } = await supabase
             .from('recipients')
@@ -84,6 +91,8 @@ export default function RecipientsPage() {
             setSelectedIds(new Set());
             fetchRecipients();
         }
+        setIsDeleting(false);
+        setIsConfirmOpen(false);
     };
 
     return (
@@ -97,9 +106,14 @@ export default function RecipientsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     {selectedIds.size > 0 && (
-                        <Button variant="destructive" size="sm" onClick={handleDelete} className="animate-in fade-in zoom-in">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedIds.size})
-                        </Button>
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => setIsAddToGroupOpen(true)} className="animate-in fade-in zoom-in">
+                                <Users className="mr-2 h-4 w-4" /> Add to Group
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => setIsConfirmOpen(true)} className="animate-in fade-in zoom-in">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedIds.size})
+                            </Button>
+                        </>
                     )}
                     <ImportRecipientsButton />
                     <Button asChild>
@@ -110,6 +124,16 @@ export default function RecipientsPage() {
                     </Button>
                 </div>
             </div>
+
+            <AddToGroupDialog
+                open={isAddToGroupOpen}
+                onOpenChange={setIsAddToGroupOpen}
+                selectedIds={Array.from(selectedIds)}
+                onSuccess={() => {
+                    setSelectedIds(new Set());
+                    toast.success("Recipients added to group");
+                }}
+            />
 
             <Card>
                 <CardHeader className="pb-3">
@@ -212,6 +236,17 @@ export default function RecipientsPage() {
                 open={!!editingRecipient}
                 onOpenChange={(open) => !open && setEditingRecipient(null)}
                 onSuccess={fetchRecipients}
+            />
+
+            <ConfirmDialog
+                open={isConfirmOpen}
+                onOpenChange={setIsConfirmOpen}
+                title={`Delete ${selectedIds.size} recipient(s)?`}
+                description="This action cannot be undone. These contacts will be permanently removed from your database."
+                onConfirm={handleDelete}
+                isLoading={isDeleting}
+                variant="destructive"
+                confirmText="Delete"
             />
         </div>
     );

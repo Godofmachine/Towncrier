@@ -1,71 +1,58 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Mail, Megaphone, ArrowUpRight, Plus, Loader2, AlertTriangle, MousePointerClick, FileWarning, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { createClient } from "@/lib/supabase/client";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays, formatDistanceToNow } from "date-fns";
+import { Loader2, Mail, MousePointerClick, UserPlus, FileWarning, Eye } from "lucide-react";
+import { format, subDays } from "date-fns";
 
-export default function DashboardPage() {
+export default function AnalyticsPage() {
+    const supabase = createClient();
+    const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState({
-        recipients: 0,
-        groups: 0,
-        campaigns: 0,
-        emailsSentToday: 0,
         totalSent: 0,
         openRate: 0,
         clickRate: 0,
         bounceRate: 0
     });
-    const [gmailConnected, setGmailConnected] = useState(false);
-    const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
     const [chartData, setChartData] = useState<any[]>([]);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const supabase = createClient();
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchAnalytics = async () => {
             setIsLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
 
-            // 1. Basic Counts
-            const recipientsCount = await supabase.from('recipients').select('*', { count: 'exact', head: true });
-            const groupsCount = await supabase.from('broadcast_groups').select('*', { count: 'exact', head: true });
-            const campaignsCount = await supabase.from('campaigns').select('*', { count: 'exact', head: true });
-
-            // 2. Profile (Quota & Connection)
-            const { data: profile } = await supabase.from('profiles').select('emails_sent_today, gmail_connected').eq('id', user.id).single();
-
-            // 3. Analytic Stats
+            // 1. Fetch Aggregated Campaign Stats
             const { data: campaigns } = await supabase
                 .from('campaigns')
                 .select('stats_sent, stats_opened, stats_clicked, stats_bounced');
 
-            let totalSent = 0, openRate = 0, clickRate = 0, bounceRate = 0;
-
             if (campaigns && campaigns.length > 0) {
-                totalSent = campaigns.reduce((acc, curr) => acc + (curr.stats_sent || 0), 0);
+                const totalSent = campaigns.reduce((acc, curr) => acc + (curr.stats_sent || 0), 0);
                 const totalOpened = campaigns.reduce((acc, curr) => acc + (curr.stats_opened || 0), 0);
                 const totalClicked = campaigns.reduce((acc, curr) => acc + (curr.stats_clicked || 0), 0);
                 const totalBounced = campaigns.reduce((acc, curr) => acc + (curr.stats_bounced || 0), 0);
 
-                openRate = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
-                clickRate = totalOpened > 0 ? Math.round((totalClicked / totalOpened) * 100) : 0;
-                bounceRate = totalSent > 0 ? Math.round((totalBounced / totalSent) * 100) : 0;
+                setStats({
+                    totalSent,
+                    openRate: totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0,
+                    clickRate: totalOpened > 0 ? Math.round((totalClicked / totalOpened) * 100) : 0, // Click-to-open rate
+                    bounceRate: totalSent > 0 ? Math.round((totalBounced / totalSent) * 100) : 0,
+                });
             }
 
-            // 4. Chart Data (Mock/Real Hybrid)
+            // 2. Fetch Chart Data (Mocking daily trend if no real time-series data exists yet)
+            // In a real app, you'd aggregate `email_events` by day. 
+            // Here we'll generate the last 7 days of "activity" based on real events if available, or empty structure.
             const today = new Date();
             const last7Days = Array.from({ length: 7 }, (_, i) => {
                 const d = subDays(today, 6 - i);
                 return format(d, 'MMM dd');
             });
 
+            // Mock shape for visualization plan compliance (Recharts requires data array)
+            // We will attempt to count real events if possible, but fallback to 0s
             const { data: events } = await supabase
                 .from('email_events')
                 .select('created_at, event_type')
@@ -82,95 +69,41 @@ export default function DashboardPage() {
             });
             setChartData(dailyData);
 
-            // 5. Recent Activity
+
+            // 3. Recent Activity Feed
             const { data: activity } = await supabase
                 .from('email_events')
                 .select('*, recipients(email, first_name, last_name), campaigns(name)')
                 .order('created_at', { ascending: false })
-                .limit(5); // Limit to 5 for dashboard
+                .limit(10);
 
             if (activity) setRecentActivity(activity);
-
-            setStats({
-                recipients: recipientsCount.count || 0,
-                groups: groupsCount.count || 0,
-                campaigns: campaignsCount.count || 0,
-                emailsSentToday: profile?.emails_sent_today || 0,
-                totalSent,
-                openRate,
-                clickRate,
-                bounceRate
-            });
-            setGmailConnected(!!profile?.gmail_connected);
 
             setIsLoading(false);
         };
 
-        fetchData();
+        fetchAnalytics();
     }, [supabase]);
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-full min-h-[500px]">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-8 animate-in fade-in-50 duration-500">
-            {/* Header Area */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-                    <p className="text-muted-foreground">
-                        Your central command center.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button asChild variant="outline">
-                        <Link href="/recipients/new">
-                            <Plus className="mr-2 h-4 w-4" /> Add Recipient
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/campaigns/new">
-                            <Plus className="mr-2 h-4 w-4" /> New Campaign
-                        </Link>
-                    </Button>
-                </div>
+        <div className="space-y-8 animate-in fade-in-50">
+            <div>
+                <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
+                <p className="text-muted-foreground mt-1">
+                    Overview of your campaign performance.
+                </p>
             </div>
 
-            {/* Status Alert */}
-            {!gmailConnected && (
-                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/20 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between shadow-sm gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-full">
-                            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-amber-900 dark:text-amber-200">Gmail Not Connected</h3>
-                            <p className="text-sm text-amber-700 dark:text-amber-400">Connect your account to start sending campaigns.</p>
-                        </div>
-                    </div>
-                    <Button asChild variant="default" className="bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto">
-                        <Link href="/settings">Connect Now</Link>
-                    </Button>
-                </div>
-            )}
-
-            {/* Main Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Emails Sent</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Emails Sent</CardTitle>
                         <Mail className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalSent}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {stats.emailsSentToday} sent today
-                        </p>
+                        <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">All time volume</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -180,7 +113,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.openRate}%</div>
-                        <p className="text-xs text-muted-foreground">Average engagement</p>
+                        <p className="text-xs text-muted-foreground">Average performance</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -190,39 +123,38 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.clickRate}%</div>
-                        <p className="text-xs text-muted-foreground">Conversion health</p>
+                        <p className="text-xs text-muted-foreground">Click-to-open ratio</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Audience Size</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Bounce Rate</CardTitle>
+                        <FileWarning className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.recipients}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Across {stats.groups} groups
-                        </p>
+                        <div className="text-2xl font-bold">{stats.bounceRate}%</div>
+                        <p className="text-xs text-muted-foreground">Delivery health</p>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Charts & Activity */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                {/* Engagement Chart */}
-                <Card className="col-span-4">
+            <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+                {/* Main Chart */}
+                <Card className="lg:col-span-4">
                     <CardHeader>
                         <CardTitle>Engagement Trends</CardTitle>
-                        <CardDescription>
-                            Email activity over the last 7 days.
-                        </CardDescription>
+                        <CardDescription>Daily activity for the last 7 days</CardDescription>
                     </CardHeader>
                     <CardContent className="pl-0">
                         <div className="h-[300px] w-full">
-                            {chartData.every(d => d.sent === 0) ? (
+                            {isLoading ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : chartData.every(d => d.sent === 0) ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md m-4">
-                                    <p>No activity yet</p>
-                                    <p className="text-xs">Send a campaign to see data here</p>
+                                    <p>No activity data available yet</p>
+                                    <p className="text-xs">Send a campaign to see trends</p>
                                 </div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -253,18 +185,20 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* Activity Feed */}
-                <Card className="col-span-3">
+                {/* Recent Activity */}
+                <Card className="lg:col-span-3">
                     <CardHeader>
-                        <CardTitle>Live Activity</CardTitle>
-                        <CardDescription>
-                            Latest real-time interactions.
-                        </CardDescription>
+                        <CardTitle>Recent Activity</CardTitle>
+                        <CardDescription>Latest interactions from your audience</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-6">
-                            {recentActivity.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-10">No recent activity.</p>
+                            {isLoading ? (
+                                <div className="flex justify-center py-10">
+                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : recentActivity.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-10">No recent activity found.</p>
                             ) : (
                                 recentActivity.map((event) => (
                                     <div key={event.id} className="flex items-start space-x-4">
@@ -275,16 +209,16 @@ export default function DashboardPage() {
                                             }`} />
                                         <div className="space-y-1">
                                             <p className="text-sm font-medium leading-none">
-                                                {event.recipients?.email || "Unknown"}
+                                                {event.recipients?.email || "Unknown Recipient"}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {event.event_type === 'sent' && "Received"}
-                                                {event.event_type === 'opened' && "Opened"}
-                                                {event.event_type === 'clicked' && "Clicked"}
-                                                {event.event_type === 'bounced' && "Bounced"}
+                                                {event.event_type === 'sent' && "Received email"}
+                                                {event.event_type === 'opened' && "Opened email"}
+                                                {event.event_type === 'clicked' && "Clicked a link in"}
+                                                {event.event_type === 'bounced' && "Bounced from"}
                                                 {" "}
                                                 <span className="font-medium text-foreground">
-                                                    {event.campaigns?.name}
+                                                    {event.campaigns?.name || "Campaign"}
                                                 </span>
                                             </p>
                                             <p className="text-[10px] text-muted-foreground pt-1">
@@ -301,3 +235,6 @@ export default function DashboardPage() {
         </div>
     );
 }
+
+// Helper needed since we don't import it in this file
+import { formatDistanceToNow } from "date-fns";

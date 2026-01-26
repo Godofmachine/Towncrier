@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
     LayoutDashboard,
     Megaphone,
-    FileEdit,
-    BarChart3,
     Settings,
     Plus,
     Mail,
@@ -50,19 +48,6 @@ export function Sidebar({ className }: SidebarProps) {
             href: "/campaigns",
             active: pathname.startsWith("/campaigns"),
         },
-        {
-            label: "Templates",
-            icon: FileEdit,
-            href: "/templates",
-            active: pathname.startsWith("/templates"),
-        },
-        {
-            label: "Analytics",
-            icon: BarChart3,
-            href: "/analytics",
-            active: pathname.startsWith("/analytics"),
-        },
-
         {
             label: "Settings",
             icon: Settings,

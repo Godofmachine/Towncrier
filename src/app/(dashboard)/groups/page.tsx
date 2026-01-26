@@ -13,24 +13,50 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function GroupsPage() {
     const [groups, setGroups] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [editingGroup, setEditingGroup] = useState<any | null>(null);
+    const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const supabase = createClient();
 
-    useEffect(() => {
-        const fetchGroups = async () => {
-            setIsLoading(true);
-            // Assuming 'broadcast_groups' table exists as per schema
-            const { data } = await supabase
-                .from('broadcast_groups')
-                .select('*')
-                .order('created_at', { ascending: false });
+    const fetchGroups = async () => {
+        setIsLoading(true);
+        // Assuming 'broadcast_groups' table exists as per schema
+        const { data } = await supabase
+            .from('broadcast_groups')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-            if (data) setGroups(data);
-            setIsLoading(false);
-        };
+        if (data) setGroups(data);
+        setIsLoading(false);
+    };
+
+    const deleteGroup = async () => {
+        if (!deletingGroupId) return;
+        setIsDeleting(true);
+
+        const { error } = await supabase
+            .from('broadcast_groups')
+            .delete()
+            .eq('id', deletingGroupId);
+
+        if (error) {
+            toast.error("Failed to delete group");
+        } else {
+            toast.success("Group deleted");
+            fetchGroups();
+        }
+        setIsDeleting(false);
+        setDeletingGroupId(null);
+    };
+
+    useEffect(() => {
         fetchGroups();
     }, []);
 
@@ -70,13 +96,23 @@ export default function GroupsPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem>Edit Group</DropdownMenuItem>
-                                                <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/groups/${group.id}`} className="cursor-pointer">
+                                                        Manage Members
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingGroup(group)}>
+                                                    Edit Details
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingGroupId(group.id)}>
+                                                    Delete
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
-                                    <CardTitle className="text-xl">{group.name}</CardTitle>
+                                    <Link href={`/groups/${group.id}`} className="hover:underline">
+                                        <CardTitle className="text-xl">{group.name}</CardTitle>
+                                    </Link>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex gap-2 mb-4">
@@ -88,9 +124,11 @@ export default function GroupsPage() {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-2">
-                                    <Button variant="outline" className="w-full" size="sm">
-                                        <Mail className="mr-2 h-3 w-3" />
-                                        Send Campaign
+                                    <Button variant="outline" className="w-full" size="sm" asChild>
+                                        <Link href={`/campaigns/new?groupId=${group.id}`}>
+                                            <Mail className="mr-2 h-3 w-3" />
+                                            Send Campaign
+                                        </Link>
                                     </Button>
                                 </CardFooter>
                             </Card>
@@ -108,6 +146,24 @@ export default function GroupsPage() {
                     </>
                 )}
             </div>
+
+            <EditGroupDialog
+                group={editingGroup}
+                open={!!editingGroup}
+                onOpenChange={(open) => !open && setEditingGroup(null)}
+                onSuccess={fetchGroups}
+            />
+
+            <ConfirmDialog
+                open={!!deletingGroupId}
+                onOpenChange={(open) => !open && setDeletingGroupId(null)}
+                title="Delete Group?"
+                description="This will permanently delete the group. Members will not be deleted, only their association with this group."
+                onConfirm={deleteGroup}
+                isLoading={isDeleting}
+                variant="destructive"
+                confirmText="Delete Group"
+            />
         </div>
     );
 }
