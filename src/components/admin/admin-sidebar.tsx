@@ -9,51 +9,42 @@ import {
     LayoutDashboard,
     Megaphone,
     Settings,
-    Plus,
-    Mail,
     LogOut,
-    Contact,
-    Users2
+    Users,
+    Shield
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
-export function Sidebar({ className }: SidebarProps) {
+export function AdminSidebar({ className }: SidebarProps) {
     const pathname = usePathname();
 
     const routes = [
         {
             label: "Dashboard",
             icon: LayoutDashboard,
-            href: "/dashboard",
-            active: pathname === "/dashboard",
+            href: "/admin",
+            active: pathname === "/admin",
         },
         {
-            label: "Recipients",
-            icon: Contact,
-            href: "/recipients",
-            active: pathname.startsWith("/recipients"),
-        },
-        {
-            label: "Groups",
-            icon: Users2,
-            href: "/groups",
-            active: pathname.startsWith("/groups"),
+            label: "Users",
+            icon: Users,
+            href: "/admin/users",
+            active: pathname.startsWith("/admin/users"),
         },
         {
             label: "Campaigns",
             icon: Megaphone,
-            href: "/campaigns",
-            active: pathname.startsWith("/campaigns"),
+            href: "/admin/campaigns",
+            active: pathname.startsWith("/admin/campaigns"),
         },
         {
-            label: "Settings",
+            label: "System Settings",
             icon: Settings,
-            href: "/settings",
-            active: pathname.startsWith("/settings"),
+            href: "/admin/settings",
+            active: pathname.startsWith("/admin/settings"),
         },
     ];
 
@@ -61,20 +52,13 @@ export function Sidebar({ className }: SidebarProps) {
         <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
-                    <Link href="/dashboard" className="flex items-center pl-3 mb-14">
+                    <Link href="/admin" className="flex items-center pl-3 mb-14">
                         <div className="mr-2">
                             <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
-                        <h1 className="text-xl font-bold">The Towncrier</h1>
+                        <h1 className="text-xl font-bold">The Towncrier <span className="text-xs font-normal bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1 align-middle">Admin</span></h1>
                     </Link>
                     <div className="space-y-1">
-                        <Button asChild size="lg" className="w-full justify-start mb-6 font-semibold shadow-md">
-                            <Link href="/campaigns/new">
-                                <Plus className="mr-2 h-5 w-5" />
-                                New Campaign
-                            </Link>
-                        </Button>
-
                         {routes.map((route) => (
                             <Button
                                 key={route.href}
@@ -112,7 +96,7 @@ function UserProfile() {
             const { data } = await supabase.auth.getUser();
             if (data.user) {
                 setUser({
-                    name: data.user.user_metadata.full_name || data.user.user_metadata.name || "User",
+                    name: data.user.user_metadata.full_name || data.user.user_metadata.name || "Admin",
                     email: data.user.email || ""
                 });
             }
@@ -129,13 +113,9 @@ function UserProfile() {
 
     return (
         <div className="flex items-center gap-3 p-3 bg-card border rounded-lg shadow-sm">
-            <Avatar className="h-9 w-9">
-                {/* Safe access to nested properties */}
-                <AvatarImage src={(user as any).user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-primary/10 text-primary font-bold uppercase">
-                    {user.name ? user.name[0] : 'U'}
-                </AvatarFallback>
-            </Avatar>
+            <div className="h-9 w-9 rounded-full bg-destructive/10 flex items-center justify-center text-destructive font-bold uppercase">
+                <Shield className="h-4 w-4" />
+            </div>
             <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium truncate">{user.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>

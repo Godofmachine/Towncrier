@@ -18,9 +18,9 @@ export function DashboardPreview() {
             <div className="w-48 lg:w-56 border-r bg-muted/30 p-3 hidden md:flex flex-col gap-4 pt-4">
                 <div className="flex items-center gap-2 px-2 font-semibold text-primary mb-2">
                     <div className="mr-2">
-                        <Image src="/logo.svg" alt="Towncrier" width={24} height={24} className="h-6 w-6 object-contain" />
+                        <Image src="/logo.svg" alt="The Towncrier" width={24} height={24} className="h-6 w-6 object-contain" />
                     </div>
-                    Towncrier
+                    The Towncrier
                 </div>
 
                 <div className="space-y-1">

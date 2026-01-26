@@ -10,8 +10,8 @@ export function Footer() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
                     <div className="space-y-4 max-w-xs">
                         <div className="flex items-center gap-2 font-semibold text-lg">
-                            <Image src="/logo.svg" alt="Towncrier" width={24} height={24} className="h-6 w-6 object-contain" />
-                            Towncrier
+                            <Image src="/logo.svg" alt="The Towncrier" width={24} height={24} className="h-6 w-6 object-contain" />
+                            The Towncrier
                         </div>
                         <p className="text-sm leading-6 text-muted-foreground">
                             Send personalized bulk emails directly from your Gmail. The simple, zero-code alternative.
@@ -80,10 +80,10 @@ export function Footer() {
                 </div>
                 <div className="mt-16 border-t pt-8">
                     <p className="text-xs leading-5 text-muted-foreground text-center">
-                        &copy; {new Date().getFullYear()} Towncrier. All rights reserved.
+                        Built by Blueking | &copy; {new Date().getFullYear()} The Towncrier. All rights reserved.
                     </p>
                 </div>
             </div>
-        </footer>
+        </footer >
     );
 }

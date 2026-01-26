@@ -45,7 +45,7 @@ export default function ConnectGmailPage() {
                     </div>
                     <CardTitle className="text-2xl font-bold">Connect your Gmail</CardTitle>
                     <CardDescription className="text-base">
-                        Towncrier sends emails directly from your Gmail account, ensuring high deliverability and trust.
+                        The Towncrier sends emails directly from your Gmail account, ensuring high deliverability and trust.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

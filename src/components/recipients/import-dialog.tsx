@@ -173,7 +173,7 @@ export function ImportDialog({ children, groupId, onSuccess, open, onOpenChange 
                                 const url = window.URL.createObjectURL(blob);
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = "towncrier_template.csv";
+                                a.download = "the_towncrier_template.csv";
                                 a.click();
                                 window.URL.revokeObjectURL(url);
                             }}>

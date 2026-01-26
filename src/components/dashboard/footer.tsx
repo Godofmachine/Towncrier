@@ -33,7 +33,7 @@ export function DashboardFooter() {
                 <div className="mt-8 md:order-1 md:mt-0">
                     <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
                         <p className="text-xs leading-5 text-muted-foreground">
-                            &copy; {currentYear} Towncrier. Built by <Link href="https://blueking.vercel.app" target="_blank" className="underline underline-offset-2 font-medium text-foreground hover:text-primary">Blueking</Link>.
+                            &copy; {currentYear} The Towncrier. Built by <Link href="https://blueking.vercel.app" target="_blank" className="underline underline-offset-2 font-medium text-foreground hover:text-primary">Blueking</Link>.
                         </p>
                         <nav className="flex gap-4 text-xs text-muted-foreground">
                             <Link href="/" className="hover:underline hover:text-foreground">

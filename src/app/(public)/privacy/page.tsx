@@ -16,7 +16,7 @@ export default function PrivacyPage() {
                 <CardContent className="p-8 prose dark:prose-invert max-w-none">
                     <h3>1. Introduction</h3>
                     <p>
-                        At Towncrier, we take your privacy seriously. This Privacy Policy describes how we collect, use, and protect your information when you use our Service.
+                        At The Towncrier, we take your privacy seriously. This Privacy Policy describes how we collect, use, and protect your information when you use our Service.
                     </p>
 
                     <h3>2. Information We Collect</h3>
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
 
                     <h3>4. Google User Data</h3>
                     <p>
-                        Towncrier requests access to your Gmail account solely to send emails on your behalf.
+                        The Towncrier requests access to your Gmail account solely to send emails on your behalf.
                     </p>
                     <ul>
                         <li>We <strong>do not</strong> read your personal emails (scopes are restricted to sending only).</li>

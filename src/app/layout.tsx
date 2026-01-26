@@ -15,8 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Towncrier | Email Broadcasting Platform",
+  title: "The Towncrier | Email Broadcasting Platform",
   description: "Send personalized emails at scale with AI assistance.",
+  verification: {
+    google: "LlJjq6cjOWoLevA73nY3y7nO_t9IX3q4hWSgNURKiOA",
+  },
 };
 
 export default function RootLayout({

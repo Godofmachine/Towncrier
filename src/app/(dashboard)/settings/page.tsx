@@ -212,7 +212,7 @@ function SettingsContent() {
                             Subscription
                             <Badge variant="secondary">Coming Soon</Badge>
                         </CardTitle>
-                        <CardDescription>Manage your Towncrier Pro plan.</CardDescription>
+                        <CardDescription>Manage your The Towncrier Pro plan.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="bg-muted h-32 rounded-lg flex items-center justify-center">

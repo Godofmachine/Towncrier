@@ -16,12 +16,12 @@ export default function TermsPage() {
                 <CardContent className="p-8 prose dark:prose-invert max-w-none">
                     <h3>1. Acceptance of Terms</h3>
                     <p>
-                        By accessing and using Towncrier ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, simply do not use the Service.
+                        By accessing and using The Towncrier ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, simply do not use the Service.
                     </p>
 
                     <h3>2. Description of Service</h3>
                     <p>
-                        Towncrier provides a newsletter and email campaign management tool that integrates with your personal Gmail account to send emails.
+                        The Towncrier provides a newsletter and email campaign management tool that integrates with your personal Gmail account to send emails.
                     </p>
 
                     <h3>3. User Responsibilities</h3>
@@ -37,12 +37,12 @@ export default function TermsPage() {
 
                     <h3>4. Google API Services User Data Policy</h3>
                     <p>
-                        Towncrier's use and transfer to any other app of information received from Google APIs will adhere to <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.
+                        The Towncrier's use and transfer to any other app of information received from Google APIs will adhere to <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.
                     </p>
 
                     <h3>5. Limitation of Liability</h3>
                     <p>
-                        To the maximum extent permitted by law, Towncrier shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues.
+                        To the maximum extent permitted by law, The Towncrier shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues.
                     </p>
 
                     <h3>6. Termination</h3>

@@ -11,7 +11,7 @@ export default function DocsPage() {
             <div>
                 <h1 className="text-4xl font-bold tracking-tight">Documentation</h1>
                 <p className="text-muted-foreground mt-2 text-lg">
-                    Everything you need to know about using Towncrier.
+                    Everything you need to know about using The Towncrier.
                 </p>
             </div>
 
@@ -28,7 +28,7 @@ export default function DocsPage() {
                 <TabsContent value="getting-started" className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Welcome to Towncrier</CardTitle>
+                            <CardTitle>Welcome to The Towncrier</CardTitle>
                             <CardDescription>
                                 A zero-code alternative to Google Apps Script for sending personalized bulk emails.
                             </CardDescription>

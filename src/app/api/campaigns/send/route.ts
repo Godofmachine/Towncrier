@@ -30,7 +30,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Gmail not connected" }, { status: 400 });
         }
 
-        const from = `"${profile.full_name || 'Towncrier User'}" <${profile.gmail_email}>`;
+        const from = `"${profile.full_name || 'The Towncrier User'}" <${profile.gmail_email}>`;
         let sentCount = 0;
 
         // 3. Send Loop (Naive implementation for MVP - sequential)

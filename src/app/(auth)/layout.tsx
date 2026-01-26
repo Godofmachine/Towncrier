@@ -27,15 +27,15 @@ export default async function AuthLayout({
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-2 font-bold text-xl">
                         <div className="mr-2">
-                            <Image src="/logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
+                            <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
-                        <span>Towncrier</span>
+                        <span>The Towncrier</span>
                     </Link>
                 </div>
 
                 <div className="relative z-10 space-y-4 max-w-lg">
                     <blockquote className="text-2xl font-medium leading-relaxed">
-                        &ldquo;Towncrier has completely transformed how we handle our newsletters. It's like having a marketing team in my pocket.&rdquo;
+                        &ldquo;The Towncrier has completely transformed how we handle our newsletters. It's like having a marketing team in my pocket.&rdquo;
                     </blockquote>
                     <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
@@ -53,9 +53,9 @@ export default async function AuthLayout({
                     <div className="lg:hidden mb-8">
                         <Link href="/" className="flex items-center gap-2 font-bold text-xl">
                             <div className="mr-2">
-                                <Image src="/logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
+                                <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                             </div>
-                            <span>Towncrier</span>
+                            <span>The Towncrier</span>
                         </Link>
                     </div>
                     {children}
