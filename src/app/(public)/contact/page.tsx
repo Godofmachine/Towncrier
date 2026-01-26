@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, MapPin, Phone, Send, Loader2, CheckCircle2, Github, Twitter, Linkedin, Coffee } from "lucide-react";
+import { Mail, Phone, Send, Loader2, CheckCircle2, Github, Linkedin, Coffee } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -64,9 +64,9 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in-50 duration-500 max-w-5xl mx-auto pb-20">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight">Contact Us</h2>
+        <div className="py-12 px-6 max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
+            <div className="text-center md:text-left">
+                <h1 className="text-4xl font-bold tracking-tight">Contact Us</h1>
                 <p className="text-muted-foreground mt-2 text-lg">
                     Have questions or feedback? We'd love to hear from you.
                 </p>
@@ -187,7 +187,7 @@ export default function ContactPage() {
                                 Our support team is available Monday through Friday, 9am to 5pm PST.
                             </p>
                             <p className="text-slate-300 text-sm">
-                                Check our <a href="/docs" className="underline text-white hover:text-primary">documentation</a> for quick answers to common questions.
+                                Check our <Link href="/docs" className="underline text-white hover:text-primary">documentation</Link> for quick answers to common questions.
                             </p>
                         </CardContent>
                     </Card>

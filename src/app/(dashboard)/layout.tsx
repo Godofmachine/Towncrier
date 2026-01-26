@@ -17,7 +17,7 @@ export default function DashboardLayout({
             <main className="md:pl-72 h-full bg-muted/20 min-h-screen flex flex-col">
                 <div className="md:hidden h-16 flex items-center px-4 border-b bg-background sticky top-0 z-50">
                     <MobileNav />
-                    <Image src="/towncrier-logo.png" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain ml-4 mr-2" />
+                    <Image src="/logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain ml-4 mr-2" />
                     <span className="font-bold">Towncrier</span>
                 </div>
                 <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto space-y-8 w-full">

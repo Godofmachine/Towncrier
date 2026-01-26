@@ -62,7 +62,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <div className="px-3 py-2">
                     <Link href="/dashboard" className="flex items-center pl-3 mb-14">
                         <div className="mr-2">
-                            <Image src="/Towncrier-logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
+                            <Image src="/logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
                         <h1 className="text-xl font-bold">Towncrier</h1>
                     </Link>

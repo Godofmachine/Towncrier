@@ -1,12 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function PrivacyPage() {
     return (
-        <div className="space-y-8 animate-in fade-in-50 duration-500 max-w-4xl mx-auto pb-20">
+        <div className="space-y-8 animate-in fade-in-50 duration-500 max-w-4xl mx-auto py-12 px-6">
             <div>
-                <h2 className="text-3xl font-bold tracking-tight">Privacy Policy</h2>
+                <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
                 <p className="text-muted-foreground mt-2">
                     Last updated: January 25, 2024
                 </p>
