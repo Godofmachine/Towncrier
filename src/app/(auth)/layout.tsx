@@ -27,7 +27,7 @@ export default async function AuthLayout({
                 <div className="relative z-10">
                     <Link href="/" className="flex items-center gap-2 font-bold text-xl">
                         <div className="mr-2">
-                            <Image src="/towncrier-logo.png" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
+                            <Image src="/Towncrier-logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
                         <span>Towncrier</span>
                     </Link>
@@ -53,7 +53,7 @@ export default async function AuthLayout({
                     <div className="lg:hidden mb-8">
                         <Link href="/" className="flex items-center gap-2 font-bold text-xl">
                             <div className="mr-2">
-                                <Image src="/towncrier-logo.png" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
+                                <Image src="/Towncrier-logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                             </div>
                             <span>Towncrier</span>
                         </Link>

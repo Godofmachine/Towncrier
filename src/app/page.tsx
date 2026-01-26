@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Mail, Shield, Zap, Sparkles } from "lucide-react";
+import { DashboardPreview } from "@/components/home/dashboard-preview";
 
 export default function Home() {
   return (
@@ -9,7 +10,7 @@ export default function Home() {
       <header className="px-6 h-16 flex items-center justify-between border-b">
         <div className="flex items-center gap-2 font-bold text-xl">
           <div className="mr-2">
-            <Image src="/towncrier-logo.png" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
+            <Image src="/Towncrier-logo.svg" alt="Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
           </div>
           <span>Towncrier</span>
         </div>
@@ -49,18 +50,12 @@ export default function Home() {
                 Start Sending for Free <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg" className="h-12 px-8">
-                View Demo
-              </Button>
-            </Link>
+
           </div>
 
           <div className="pt-16 animate-in fade-in zoom-in duration-1000 delay-500">
             <div className="rounded-xl border bg-card shadow-2xl overflow-hidden max-w-4xl mx-auto p-2">
-              <div className="rounded-lg bg-muted/50 aspect-video flex items-center justify-center text-muted-foreground border border-dashed">
-                Dashboard Preview Image Placeholder
-              </div>
+              <DashboardPreview />
             </div>
           </div>
         </section>
