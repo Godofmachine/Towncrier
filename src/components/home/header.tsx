@@ -41,26 +41,31 @@ export function Header() {
         router.push("/login");
     };
 
+
+
     return (
         <header className="px-6 h-16 flex items-center justify-between border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl">
                 <div className="mr-2">
                     <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                 </div>
-                <span>The Towncrier</span>
+                <span className="hidden sm:inline-block">The Towncrier</span>
             </Link>
-            <nav className="flex gap-4 items-center">
-                <Link href="/docs">
-                    <Button variant="ghost">How it Works</Button>
-                </Link>
+
+            <div className="flex items-center gap-4">
                 {user ? (
-                    <div className="flex items-center gap-4">
+                    <>
                         <Link href="/dashboard">
-                            <Button variant="outline">
+                            <Button variant="outline" size="sm" className="hidden sm:flex">
                                 <LayoutDashboard className="mr-2 h-4 w-4" />
                                 Dashboard
                             </Button>
+                            {/* Mobile Icon Only */}
+                            <Button variant="outline" size="icon" className="flex sm:hidden">
+                                <LayoutDashboard className="h-4 w-4" />
+                            </Button>
                         </Link>
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -93,18 +98,13 @@ export function Header() {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                    </div>
-                ) : (
-                    <>
-                        <Link href="/login">
-                            <Button variant="ghost">Sign In</Button>
-                        </Link>
-                        <Link href="/signup">
-                            <Button>Get Started</Button>
-                        </Link>
                     </>
+                ) : (
+                    <Link href="/signup">
+                        <Button>Get Started</Button>
+                    </Link>
                 )}
-            </nav>
+            </div>
         </header>
     );
 }

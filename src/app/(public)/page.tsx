@@ -7,7 +7,7 @@ export default function Home() {
     return (
         <>
             {/* Hero Section */}
-            <section className="py-24 md:py-32 px-6 text-center space-y-8 max-w-5xl mx-auto">
+            <section className="py-12 md:py-32 px-6 text-center space-y-8 max-w-5xl mx-auto">
                 <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700">
                     <Sparkles className="mr-2 h-3 w-3" />
                     The Zero-Code Alternative to Apps Script
@@ -22,16 +22,18 @@ export default function Home() {
                     Stop wrestling with spreadsheets and scripts. Use our beautiful dashboard to send personalized mass emails that land in the primary inbox. 100% Free.
                 </p>
 
-                <div className="flex items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+                <div className="flex flex-col items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
                     <Link href="/signup">
                         <Button size="lg" className="h-12 px-8 text-base">
                             Start Sending for Free <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
                     </Link>
-
+                    <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4">
+                        How it Works
+                    </Link>
                 </div>
 
-                <div className="pt-16 animate-in fade-in zoom-in duration-1000 delay-500">
+                <div className="pt-8 md:pt-16 animate-in fade-in zoom-in duration-1000 delay-500">
                     <div className="rounded-xl border bg-card shadow-2xl overflow-hidden max-w-4xl mx-auto p-2">
                         <DashboardPreview />
                     </div>

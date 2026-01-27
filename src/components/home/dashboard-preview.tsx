@@ -13,7 +13,7 @@ import Image from "next/image";
 
 export function DashboardPreview() {
     return (
-        <div className="w-full aspect-video bg-background rounded-lg overflow-hidden flex text-left text-sm border shadow-sm relative group">
+        <div className="w-full h-auto min-h-[600px] md:min-h-0 md:aspect-video bg-background rounded-lg overflow-hidden flex text-left text-sm border shadow-sm relative group">
             {/* Sidebar Mockup */}
             <div className="w-48 lg:w-56 border-r bg-muted/30 p-3 hidden md:flex flex-col gap-4 pt-4">
                 <div className="flex items-center gap-2 px-2 font-semibold text-primary mb-2">
@@ -56,7 +56,7 @@ export function DashboardPreview() {
             {/* Main Content Mockup */}
             <div className="flex-1 flex flex-col bg-background/50">
                 {/* Header Mockup */}
-                <div className="h-14 border-b px-6 flex items-center justify-between bg-background/80 backdrop-blur-sm">
+                <div className="h-14 border-b px-4 md:px-6 flex items-center justify-between bg-background/80 backdrop-blur-sm">
                     <h2 className="font-semibold text-lg">Dashboard</h2>
                     <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center">
@@ -69,9 +69,9 @@ export function DashboardPreview() {
                     </div>
                 </div>
 
-                <div className="p-6 space-y-6 overflow-hidden">
+                <div className="p-4 md:p-6 space-y-6 overflow-hidden">
                     {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {[
                             { label: "Total Sent", val: "2,543", trend: "+12%", icon: Send, color: "text-blue-500" },
                             { label: "Open Rate", val: "48.2%", trend: "+5%", icon: Mail, color: "text-purple-500" },

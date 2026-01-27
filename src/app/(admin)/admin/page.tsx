@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Mail, Megaphone, Activity, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { Users, Mail, Megaphone, Activity, CheckCircle2, Loader2, AlertTriangle, ExternalLink } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -120,6 +120,14 @@ export default function AdminDashboardPage() {
                     <p className="text-muted-foreground">
                         System-wide monitoring and management.
                     </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Link href="/" target="_blank">
+                        <Button>
+                            View Site
+                            <ExternalLink className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
                 </div>
             </div>
 

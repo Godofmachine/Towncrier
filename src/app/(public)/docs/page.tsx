@@ -16,12 +16,12 @@ export default function DocsPage() {
             </div>
 
             <Tabs defaultValue="getting-started" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:w-auto h-auto">
-                    <TabsTrigger value="getting-started" className="py-2">Getting Started</TabsTrigger>
-                    <TabsTrigger value="ai" className="py-2 gap-2"><Sparkles className="h-4 w-4 text-purple-500" /> AI Companion</TabsTrigger>
-                    <TabsTrigger value="groups" className="py-2">Groups</TabsTrigger>
-                    <TabsTrigger value="campaigns" className="py-2">Campaigns</TabsTrigger>
-                    <TabsTrigger value="faq" className="py-2">FAQ</TabsTrigger>
+                <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start md:justify-center h-auto py-2 px-1 gap-2 bg-transparent md:bg-muted/50 scroll-pl-6 snap-x">
+                    <TabsTrigger value="getting-started" className="shrink-0 snap-start data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-full px-4">Getting Started</TabsTrigger>
+                    <TabsTrigger value="ai" className="shrink-0 snap-start gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-full px-4"><Sparkles className="h-4 w-4 text-purple-500" /> AI Companion</TabsTrigger>
+                    <TabsTrigger value="groups" className="shrink-0 snap-start data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-full px-4">Groups</TabsTrigger>
+                    <TabsTrigger value="campaigns" className="shrink-0 snap-start data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-full px-4">Campaigns</TabsTrigger>
+                    <TabsTrigger value="faq" className="shrink-0 snap-start data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-full px-4">FAQ</TabsTrigger>
                 </TabsList>
 
                 {/* GETTING STARTED */}
