@@ -35,6 +35,7 @@ export async function POST(req: Request) {
                - Use personalization when appropriate (e.g., "{{first_name}}")
                - No HTML formatting
                - Don't use quotes around the subject
+               - IMPORTANT: Respond with ONLY the subject line text. Do not provide any explanation, labels like 'Here is the subject:', or any other conversational text. Just the subject line itself.
                
                Context: ${prompt}`
             : `You are an expert email copywriter specializing in personalized campaigns.

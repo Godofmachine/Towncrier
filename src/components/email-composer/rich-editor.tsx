@@ -23,7 +23,7 @@ interface RichEditorProps {
 }
 
 export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onImage, variables, fromName }: RichEditorProps) {
-    const [showAi, setShowAi] = useState(true);
+    const [showAi, setShowAi] = useState(false);
 
     const editor = useEditor({
         extensions: [
@@ -82,7 +82,7 @@ export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onI
     };
 
     return (
-        <div className="flex flex-col md:flex-row h-[600px] border rounded-md overflow-hidden bg-background relative">
+        <div className="flex flex-col md:flex-row min-h-[500px] md:h-[600px] border rounded-md overflow-hidden bg-background relative">
             <div className="flex-1 flex flex-col min-w-0 h-full">
                 <div className="flex justify-between items-center bg-muted/20 pr-2 flex-wrap gap-2 md:gap-0">
                     <Toolbar editor={editor} onAttach={onAttach} onImage={onImage} variables={variables} />
