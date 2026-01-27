@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Protected routes pattern
-    if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
+    if ((request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/admin")) && !user) {
         return NextResponse.redirect(new URL("/login", request.url));
     }
 

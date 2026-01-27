@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,6 +56,17 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
+
+    // Check active session
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                router.replace("/dashboard");
+            }
+        };
+        checkSession();
+    }, [supabase, router]);
 
     return (
         <div className="space-y-6">

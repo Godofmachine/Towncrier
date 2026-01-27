@@ -31,7 +31,12 @@ export default function DashboardPage() {
         const fetchData = async () => {
             setIsLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) {
+                // Redirect if not authenticated to prevent infinite load
+                // In client component we can use window or router, but here fetching inside effect:
+                window.location.href = '/login';
+                return;
+            }
 
             // 1. Basic Counts
             const recipientsCount = await supabase.from('recipients').select('*', { count: 'exact', head: true });
@@ -269,9 +274,9 @@ export default function DashboardPage() {
                                 recentActivity.map((event) => (
                                     <div key={event.id} className="flex items-start space-x-4">
                                         <div className={`mt-1 h-2 w-2 rounded-full ring-2 ring-offset-2 ${event.event_type === 'opened' ? 'bg-green-500 ring-green-100' :
-                                                event.event_type === 'clicked' ? 'bg-blue-500 ring-blue-100' :
-                                                    event.event_type === 'bounced' ? 'bg-red-500 ring-red-100' :
-                                                        'bg-gray-400 ring-gray-100'
+                                            event.event_type === 'clicked' ? 'bg-blue-500 ring-blue-100' :
+                                                event.event_type === 'bounced' ? 'bg-red-500 ring-red-100' :
+                                                    'bg-gray-400 ring-gray-100'
                                             }`} />
                                         <div className="space-y-1">
                                             <p className="text-sm font-medium leading-none">
