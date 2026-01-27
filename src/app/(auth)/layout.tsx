@@ -11,12 +11,10 @@ export default async function AuthLayout({
 }) {
     // Check if user is already authenticated
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // const { data: { user } } = await supabase.auth.getUser();
 
-    // Redirect to dashboard if already logged in
-    if (user) {
-        redirect('/dashboard');
-    }
+    // Redirect logic moved to middleware/pages to allow reset-password access
+
 
     return (
         <div className="min-h-screen grid lg:grid-cols-2">
