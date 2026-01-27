@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { getGmailClient, createEmailBody } from "@/lib/email/gmail-service";
-import DOMPurify from 'isomorphic-dompurify';
 
 // SECURITY: Content validation to prevent spam/phishing
 function validateEmailContent(content: string, subject: string) {
@@ -41,7 +40,8 @@ function validateEmailContent(content: string, subject: string) {
 }
 
 // SECURITY: Sanitize HTML content to prevent XSS
-function sanitizeHTML(html: string): string {
+async function sanitizeHTML(html: string): Promise<string> {
+    const DOMPurify = (await import('isomorphic-dompurify')).default;
     return DOMPurify.sanitize(html, {
         ALLOWED_TAGS: [
             'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
@@ -128,7 +128,7 @@ export async function sendCampaign({
     }
 
     // 6. SECURITY: Sanitize HTML content to prevent XSS
-    const sanitizedContent = sanitizeHTML(content);
+    const sanitizedContent = await sanitizeHTML(content);
 
     // 7. SECURITY: Content validation (after sanitization)
     validateEmailContent(sanitizedContent, subject);
