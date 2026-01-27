@@ -8,11 +8,11 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         // Default values
-        let userId = user?.id || null;
+        const userId = user?.id || null;
         let email = user?.email; // Default to auth email if available
-        let status = body.status || 'subscribed';
-        let firstName = body.first_name;
-        let lastName = body.last_name;
+        const status = body.status || 'subscribed';
+        const firstName = body.first_name;
+        const lastName = body.last_name;
 
         // If public (no user), we require email, first_name, last_name
         if (!userId) {
