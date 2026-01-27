@@ -54,7 +54,7 @@ export async function GET(request: Request) {
                 refresh_token: tokens.refresh_token,
                 token_expiry: new Date(tokens.expiry_date || Date.now() + 3600000).toISOString(),
                 scope: tokens.scope
-            });
+            }, { onConflict: 'user_id' });
 
         if (dbError) throw dbError;
 
@@ -69,8 +69,9 @@ export async function GET(request: Request) {
 
         return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?success=gmail_connected`);
 
-    } catch (err) {
-        console.error("Gmail callback error:", err);
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=server_error`);
+    } catch (err: any) {
+        console.error("Gmail callback error DETAIL:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        const errorMessage = err?.message || "Unknown error";
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?error=server_error&details=${encodeURIComponent(errorMessage)}`);
     }
 }

@@ -323,12 +323,85 @@ function CampaignEditor() {
         }
     };
 
-    const steps = [
-        { number: 1, title: "Details" },
-        { number: 2, title: "Recipients" },
-        { number: 3, title: "Content" },
-        { number: 4, title: "Review" },
-    ];
+    const handleSchedule = async () => {
+        if (!date) return;
+        setIsSending(true);
+
+        try {
+            // 1. Resolve Recipients (Copy-paste logic from handleSend - should have refactored but safe for now)
+            let finalRecipients = [];
+            if (recipientType === 'specific') {
+                finalRecipients = contacts.filter(c => selectedRecipients.includes(c.id));
+            } else if (recipientType === 'all') {
+                const { data } = await supabase.from('recipients').select('*').eq('status', 'active');
+                finalRecipients = data || [];
+            } else {
+                if (!selectedGroupId) {
+                    toast.error("Please select a group");
+                    setIsSending(false);
+                    return;
+                }
+                const { data: memberData } = await supabase
+                    .from('group_members')
+                    .select('recipient_id, recipients:recipient_id(*)')
+                    .eq('group_id', selectedGroupId);
+                finalRecipients = memberData?.map((item: any) => item.recipients).filter((r: any) => r && r.status === 'active') || [];
+            }
+
+            if (finalRecipients.length === 0) {
+                toast.error("No recipients selected");
+                setIsSending(false);
+                return;
+            }
+
+            // 2. Upsert Campaign first (ensure ID exists)
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) return;
+
+            const payload = {
+                user_id: user.id,
+                name: name || 'Untitled Campaign',
+                subject,
+                content,
+                status: 'scheduled',
+                scheduled_at: date.toISOString(),
+                total_recipients: finalRecipients.length
+            };
+
+            let targetId = campaignId;
+
+            if (!targetId) {
+                const { data, error } = await supabase.from('campaigns').insert(payload).select().single();
+                if (error) throw error;
+                targetId = data.id;
+                setCampaignId(targetId);
+            } else {
+                await supabase.from('campaigns').update(payload).eq('id', targetId);
+            }
+
+            // 3. Snapshot Recipients (Important for Cron)
+            // Delete old potential pending ones to avoid dupes if re-scheduling
+            await supabase.from('campaign_recipients').delete().eq('campaign_id', targetId);
+
+            const recipientRows = finalRecipients.map(r => ({
+                campaign_id: targetId,
+                recipient_id: r.id,
+                status: 'pending'
+            }));
+
+            const { error: rError } = await supabase.from('campaign_recipients').insert(recipientRows);
+            if (rError) throw rError;
+
+            toast.success(`Campaign scheduled for ${date.toLocaleString()}!`);
+            router.push('/dashboard');
+
+        } catch (error: any) {
+            console.error(error);
+            toast.error("Failed to schedule: " + error.message);
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in-50 duration-500 pb-20">
@@ -438,23 +511,23 @@ function CampaignEditor() {
 
                                             {recipientType === 'specific' && (
                                                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                                    <div className="flex justify-between items-center bg-muted/40 p-3 rounded-lg border">
-                                                        <div className="text-sm font-medium">
+                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-muted/40 p-3 rounded-lg border gap-3 sm:gap-0">
+                                                        <div className="text-sm font-medium w-full sm:w-auto">
                                                             Selected: {selectedRecipients.length} recipients
                                                         </div>
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2 w-full sm:w-auto">
                                                             <ImportDialog>
-                                                                <Button variant="outline" size="sm" className="h-8">
+                                                                <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none">
                                                                     <Upload className="mr-2 h-3 w-3" /> Import CSV
                                                                 </Button>
                                                             </ImportDialog>
-                                                            <QuickAddRecipientDialog
-                                                                onSuccess={(newContact) => {
-                                                                    setContacts(prev => [newContact, ...prev]);
-                                                                    // Default select the new one?
-                                                                    // toggleRecipient(newContact.id);
-                                                                }}
-                                                            />
+                                                            <div className="flex-1 sm:flex-none">
+                                                                <QuickAddRecipientDialog
+                                                                    onSuccess={(newContact) => {
+                                                                        setContacts(prev => [newContact, ...prev]);
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -629,7 +702,7 @@ function CampaignEditor() {
                                 <div className="space-y-6 max-w-2xl mx-auto py-6 animate-in slide-in-from-right-10 fade-in duration-300">
                                     <div className="bg-muted/30 p-6 rounded-lg space-y-4 border">
                                         <h3 className="font-semibold text-lg border-b pb-2">Campaign Summary</h3>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Summary Details */}
                                             <div>
                                                 <Label className="text-muted-foreground">Name</Label>
@@ -792,13 +865,22 @@ function CampaignEditor() {
                                                 <Clock className="mr-2 h-4 w-4" /> Schedule
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
+                                        <PopoverContent className="w-auto p-4 flex flex-col gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Pick a date</h4>
+                                                <p className="text-sm text-muted-foreground">Schedule your campaign for later.</p>
+                                            </div>
                                             <Calendar
                                                 mode="single"
                                                 selected={date}
                                                 onSelect={setDate}
                                                 initialFocus
+                                                disabled={(date) => date < new Date()}
                                             />
+                                            <Button disabled={!date || isSending} onClick={handleSchedule} className="w-full">
+                                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                Confirm Schedule
+                                            </Button>
                                         </PopoverContent>
                                     </Popover>
                                     <Button onClick={handleSend} className="bg-green-600 hover:bg-green-700" disabled={isSending}>
