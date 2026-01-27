@@ -1,0 +1,13 @@
+name: Cron Job
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API
+        run: curl "${{ secrets.APP_URL }}/api/cron/process-scheduled"
