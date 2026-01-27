@@ -22,7 +22,7 @@ export function MobileNav() {
                 <VisuallyHidden>
                     <SheetTitle>Admin Navigation Menu</SheetTitle>
                 </VisuallyHidden>
-                <AdminSidebar className="border-none h-full" />
+                <AdminSidebar className="border-none h-full" onNavigate={() => setOpen(false)} />
             </SheetContent>
         </Sheet>
     );

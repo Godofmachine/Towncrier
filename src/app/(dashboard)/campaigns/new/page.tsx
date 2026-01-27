@@ -373,7 +373,7 @@ function CampaignEditor() {
 
                             {/* STEP 2: Recipients */}
                             {step === 2 && (
-                                <div className="space-y-6 max-w-2xl mx-auto py-6 animate-in slide-in-from-right-10 fade-in duration-300">
+                                <div className="space-y-6 max-w-2xl mx-auto py-2 md:py-6 animate-in slide-in-from-right-10 fade-in duration-300">
                                     <div className="space-y-4">
                                         <Label className="text-base">Who are you sending to?</Label>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -517,7 +517,7 @@ function CampaignEditor() {
 
                             {/* STEP 3: Content */}
                             {step === 3 && (
-                                <div className="h-full animate-in slide-in-from-right-10 fade-in duration-300 relative">
+                                <div className="h-full animate-in slide-in-from-right-10 fade-in duration-300 relative py-2 md:py-0">
                                     <div className="flex justify-between items-center mb-2">
                                         <Label className="block">Email Content</Label>
                                         <div className="flex items-center gap-2">

@@ -16,9 +16,11 @@ import {
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+    onNavigate?: () => void;
+}
 
-export function AdminSidebar({ className }: SidebarProps) {
+export function AdminSidebar({ className, onNavigate }: SidebarProps) {
     const pathname = usePathname();
 
     const routes = [
@@ -52,7 +54,7 @@ export function AdminSidebar({ className }: SidebarProps) {
         <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
-                    <Link href="/admin" className="flex items-center pl-3 mb-14">
+                    <Link href="/admin" className="flex items-center pl-3 mb-14" onClick={onNavigate}>
                         <div className="mr-2">
                             <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
@@ -68,6 +70,7 @@ export function AdminSidebar({ className }: SidebarProps) {
                                     route.active ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent/50"
                                 )}
                                 asChild
+                                onClick={onNavigate}
                             >
                                 <Link href={route.href}>
                                     <route.icon className={cn("h-5 w-5 mr-3", route.active ? "text-primary" : "text-muted-foreground")} />

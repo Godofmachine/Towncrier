@@ -82,24 +82,24 @@ export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onI
     };
 
     return (
-        <div className="flex h-[600px] border rounded-md overflow-hidden bg-background">
-            <div className="flex-1 flex flex-col min-w-0">
-                <div className="flex justify-between items-center bg-muted/20 pr-2">
+        <div className="flex flex-col md:flex-row h-[600px] border rounded-md overflow-hidden bg-background relative">
+            <div className="flex-1 flex flex-col min-w-0 h-full">
+                <div className="flex justify-between items-center bg-muted/20 pr-2 flex-wrap gap-2 md:gap-0">
                     <Toolbar editor={editor} onAttach={onAttach} onImage={onImage} variables={variables} />
                     {!showAi && (
-                        <Button variant="ghost" size="sm" onClick={() => setShowAi(true)} className="text-purple-600" type="button">
+                        <Button variant="ghost" size="sm" onClick={() => setShowAi(true)} className="text-purple-600 ml-auto" type="button">
                             <Sparkles className="h-4 w-4 mr-2" />
                             AI Assistant
                         </Button>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto w-full">
                     <EditorContent editor={editor} />
                 </div>
             </div>
 
             {showAi && (
-                <div className="relative border-l">
+                <div className="absolute inset-0 z-20 md:static md:z-0 md:border-l bg-background w-full md:w-80 transition-all duration-300 shadow-xl md:shadow-none animate-in slide-in-from-right-10 fade-in">
                     <Button
                         variant="ghost"
                         size="icon"

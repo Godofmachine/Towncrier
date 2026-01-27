@@ -107,7 +107,7 @@ function SettingsContent() {
             {/* Gmail Connection Card */}
             <Card className="border-l-4 border-l-primary shadow-sm">
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
                         <div className="space-y-1">
                             <CardTitle className="text-xl flex items-center gap-2">
                                 <Mail className="h-5 w-5" />
@@ -118,11 +118,11 @@ function SettingsContent() {
                             </CardDescription>
                         </div>
                         {gmailConnected ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1 w-fit">
                                 <CheckCircle2 className="mr-1 h-3 w-3" /> Connected
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 px-3 py-1">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 px-3 py-1 w-fit">
                                 Not Connected
                             </Badge>
                         )}
@@ -131,15 +131,17 @@ function SettingsContent() {
                 <CardContent className="space-y-6">
                     {gmailConnected ? (
                         <div className="space-y-6">
-                            <div className="flex items-center gap-4 bg-muted/40 p-4 rounded-lg">
-                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                    {(profile.gmail_email || profile.email)[0].toUpperCase()}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-muted/40 p-4 rounded-lg">
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
+                                        {(profile.gmail_email || profile.email)[0].toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 sm:flex-none min-w-0">
+                                        <p className="font-medium truncate">{profile.gmail_email || profile.email}</p>
+                                        <p className="text-xs text-muted-foreground">Connected</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-medium">{profile.gmail_email || profile.email}</p>
-                                    <p className="text-xs text-muted-foreground">Connected</p>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={handleDisconnect} className="text-destructive hover:text-destructive">
+                                <Button variant="outline" size="sm" onClick={handleDisconnect} className="text-destructive hover:text-destructive w-full sm:w-auto ml-auto">
                                     <LogOut className="mr-2 h-4 w-4" /> Disconnect
                                 </Button>
                             </div>
@@ -168,13 +170,13 @@ function SettingsContent() {
                                 <li>We do not use incomplete generic servers.</li>
                                 <li>100% Free sending using your existing quota.</li>
                             </ul>
-                            <div className="flex gap-2 mt-2">
-                                <Button asChild variant="outline" className="flex-1 bg-transparent border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50">
+                            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                                <Button asChild variant="outline" className="w-full sm:flex-1 bg-transparent border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50">
                                     <Link href="/docs">
                                         Learn More
                                     </Link>
                                 </Button>
-                                <Button onClick={handleConnect} className="flex-1" variant="default">
+                                <Button onClick={handleConnect} className="w-full sm:flex-1" variant="default">
                                     Connect Gmail Account
                                 </Button>
                             </div>
@@ -200,8 +202,11 @@ function SettingsContent() {
                             <Input defaultValue={profile?.email || ""} disabled />
                         </div>
                     </CardContent>
-                    <CardFooter className="border-t pt-6">
-                        <Button>Save Changes</Button>
+                    <CardFooter className="flex flex-col-reverse sm:flex-row justify-between border-t pt-6 gap-3 sm:gap-0">
+                        <Button variant="outline" asChild className="w-full sm:w-auto">
+                            <Link href="/reset-password">Change Password</Link>
+                        </Button>
+                        <Button className="w-full sm:w-auto">Save Changes</Button>
                     </CardFooter>
                 </Card>
 

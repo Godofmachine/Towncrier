@@ -19,9 +19,11 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+    onNavigate?: () => void;
+}
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className, onNavigate }: SidebarProps) {
     const pathname = usePathname();
 
     const routes = [
@@ -61,14 +63,14 @@ export function Sidebar({ className }: SidebarProps) {
         <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
-                    <Link href="/dashboard" className="flex items-center pl-3 mb-14">
+                    <Link href="/dashboard" className="flex items-center pl-3 mb-14" onClick={onNavigate}>
                         <div className="mr-2">
                             <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
                         <h1 className="text-xl font-bold">The Towncrier</h1>
                     </Link>
                     <div className="space-y-1">
-                        <Button asChild size="lg" className="w-full justify-start mb-6 font-semibold shadow-md">
+                        <Button asChild size="lg" className="w-full justify-start mb-6 font-semibold shadow-md" onClick={onNavigate}>
                             <Link href="/campaigns/new">
                                 <Plus className="mr-2 h-5 w-5" />
                                 New Campaign
@@ -84,6 +86,7 @@ export function Sidebar({ className }: SidebarProps) {
                                     route.active ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent/50"
                                 )}
                                 asChild
+                                onClick={onNavigate}
                             >
                                 <Link href={route.href}>
                                     <route.icon className={cn("h-5 w-5 mr-3", route.active ? "text-primary" : "text-muted-foreground")} />

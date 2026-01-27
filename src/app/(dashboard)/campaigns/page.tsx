@@ -70,11 +70,11 @@ export default function CampaignsPage() {
             <Card>
                 <CardContent className="p-6">
                     <Tabs defaultValue="all" className="w-full">
-                        <TabsList className="mb-4">
-                            <TabsTrigger value="all">All Campaigns</TabsTrigger>
-                            <TabsTrigger value="sent">Sent</TabsTrigger>
-                            <TabsTrigger value="draft">Drafts</TabsTrigger>
-                            <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+                        <TabsList className="mb-4 flex w-full overflow-x-auto no-scrollbar justify-start h-auto py-2 gap-2 bg-muted/50 scroll-pl-6 snap-x">
+                            <TabsTrigger value="all" className="shrink-0 snap-start">All Campaigns</TabsTrigger>
+                            <TabsTrigger value="sent" className="shrink-0 snap-start">Sent</TabsTrigger>
+                            <TabsTrigger value="draft" className="shrink-0 snap-start">Drafts</TabsTrigger>
+                            <TabsTrigger value="scheduled" className="shrink-0 snap-start">Scheduled</TabsTrigger>
                         </TabsList>
 
                         {["all", "sent", "draft", "scheduled"].map((tab) => (

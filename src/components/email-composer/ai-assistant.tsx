@@ -69,7 +69,7 @@ export function AiAssistant({ onInsert, onSubjectGenerate, fromName }: AiAssista
     };
 
     return (
-        <div className="h-full flex flex-col border-l bg-muted/10 w-80">
+        <div className="h-full flex flex-col border-l bg-muted/10 w-full md:w-80">
             <div className="p-4 border-b bg-background/50 backdrop-blur flex justify-between items-center">
                 <div>
                     <h3 className="font-semibold flex items-center gap-2">

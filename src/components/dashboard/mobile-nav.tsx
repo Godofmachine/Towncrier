@@ -22,7 +22,7 @@ export function MobileNav() {
                 <VisuallyHidden>
                     <SheetTitle>Navigation Menu</SheetTitle>
                 </VisuallyHidden>
-                <Sidebar className="border-none h-full" />
+                <Sidebar className="border-none h-full" onNavigate={() => setOpen(false)} />
             </SheetContent>
         </Sheet>
     );
