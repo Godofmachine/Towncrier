@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Mail, Shield, Zap, Sparkles } from "lucide-react";
 import { DashboardPreview } from "@/components/home/dashboard-preview";
 import Link from "next/link";
+import { NewsletterForm } from "@/components/home/newsletter-form";
 
 export default function Home() {
     return (
@@ -23,11 +24,14 @@ export default function Home() {
                 </p>
 
                 <div className="flex flex-col items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-                    <Link href="/signup">
-                        <Button size="lg" className="h-12 px-8 text-base">
-                            Start Sending for Free <ArrowRight className="ml-2 h-5 w-5" />
-                        </Button>
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                        <Link href="/signup">
+                            <Button size="lg" className="h-12 px-8 text-base w-full sm:w-auto">
+                                Start Sending for Free <ArrowRight className="ml-2 h-5 w-5" />
+                            </Button>
+                        </Link>
+                        <NewsletterForm />
+                    </div>
                     <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4">
                         How it Works
                     </Link>
