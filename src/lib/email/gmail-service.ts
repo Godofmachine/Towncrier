@@ -1,19 +1,14 @@
 import { google } from "googleapis";
 import { createClient } from "@supabase/supabase-js";
 
-// Initialize Supabase Admin client for secure token access
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/gmail/callback`
-);
-
 export async function getGmailClient(userId: string) {
+    // Initialize Supabase Admin client for secure token access
+    // Move inside function to avoid build-time env verification failures
+    const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     // 1. Fetch encrypted tokens from DB
     const { data: tokenData, error } = await supabaseAdmin
         .from("gmail_tokens")
@@ -24,6 +19,12 @@ export async function getGmailClient(userId: string) {
     if (error || !tokenData) {
         throw new Error("Gmail not connected");
     }
+
+    const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/gmail/callback`
+    );
 
     // 2. Set credentials
     oauth2Client.setCredentials({
