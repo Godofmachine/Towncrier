@@ -150,8 +150,8 @@ export default function AdminDashboardPage() {
 
             setStats({
                 totalUsers: usersCount || 0,
-                totalCampaigns: totalCampaignsCount,
-                activeCampaigns: activeCampaignsCount,
+                totalCampaigns: totalCampaignsCount || 0,
+                activeCampaigns: activeCampaignsCount || 0,
                 emailsSentTotal: totalEmailsSent,
                 systemHealth: "Operational"
             });
