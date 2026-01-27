@@ -99,7 +99,7 @@ export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onI
             </div>
 
             {showAi && (
-                <div className="absolute inset-0 z-20 md:static md:z-0 md:border-l bg-background w-full md:w-80 transition-all duration-300 shadow-xl md:shadow-none animate-in slide-in-from-right-10 fade-in">
+                <div className="w-full h-[500px] border-t md:h-auto md:border-t-0 md:border-l bg-background md:w-80 transition-all duration-300 animate-in slide-in-from-bottom-10 md:slide-in-from-right-10 fade-in">
                     <Button
                         variant="ghost"
                         size="icon"
