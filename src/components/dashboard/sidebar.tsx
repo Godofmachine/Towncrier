@@ -13,11 +13,23 @@ import {
     Mail,
     LogOut,
     Contact,
-    Users2
+    Users2,
+    Shield
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
     onNavigate?: () => void;
@@ -25,6 +37,24 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function Sidebar({ className, onNavigate }: SidebarProps) {
     const pathname = usePathname();
+    const [isAdmin, setIsAdmin] = useState(false);
+    const supabase = createClient();
+
+    useEffect(() => {
+        const checkAdminStatus = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                setIsAdmin(profile?.role === 'admin' || profile?.role === 'superadmin');
+            }
+        };
+        checkAdminStatus();
+    }, [supabase]);
 
     const routes = [
         {
@@ -59,16 +89,48 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         },
     ];
 
+    const isAdminDashboard = pathname.startsWith("/admin");
+
     return (
         <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
-                    <Link href="/dashboard" className="flex items-center pl-3 mb-14" onClick={onNavigate}>
+                    <Link href="/" className="flex items-center pl-3 mb-14" onClick={onNavigate}>
                         <div className="mr-2">
                             <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
                         <h1 className="text-xl font-bold">The Towncrier</h1>
                     </Link>
+
+                    {isAdmin && (
+                        <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Dashboard Mode</p>
+                            <Button
+                                asChild
+                                variant={isAdminDashboard ? "outline" : "secondary"}
+                                size="sm"
+                                className="w-full justify-start mb-2"
+                                onClick={onNavigate}
+                            >
+                                <Link href="/dashboard">
+                                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                                    Client Dashboard
+                                </Link>
+                            </Button>
+                            <Button
+                                asChild
+                                variant={isAdminDashboard ? "secondary" : "outline"}
+                                size="sm"
+                                className="w-full justify-start"
+                                onClick={onNavigate}
+                            >
+                                <Link href="/admin">
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    Admin Dashboard
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
                     <div className="space-y-1">
                         <Button asChild size="lg" className="w-full justify-start mb-6 font-semibold shadow-md" onClick={onNavigate}>
                             <Link href="/campaigns/new">
@@ -143,14 +205,31 @@ function UserProfile() {
                 <p className="text-sm font-medium truncate">{user.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                onClick={handleSignOut}
-            >
-                <LogOut className="h-4 w-4" />
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                        <LogOut className="h-4 w-4" />
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to log out? Any unsaved changes will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleSignOut}>
+                            Log Out
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

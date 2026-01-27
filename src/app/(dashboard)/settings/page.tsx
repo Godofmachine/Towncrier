@@ -17,6 +17,11 @@ function SettingsContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [profile, setProfile] = useState<any>(null);
     const [gmailConnected, setGmailConnected] = useState(false);
+
+    // Newsletter State
+    const [newsletterStatus, setNewsletterStatus] = useState<'subscribed' | 'unsubscribed'>('unsubscribed');
+    const [isNewsletterLoading, setIsNewsletterLoading] = useState(false);
+
     const router = useRouter();
     const searchParams = useSearchParams();
     const supabase = createClient();
@@ -46,6 +51,33 @@ function SettingsContent() {
                     .eq('id', user.id)
                     .single();
 
+                // Self-Heal: Check if usage needs backfilling from untracked campaigns
+                const todayStr = new Date().toISOString().split('T')[0];
+                const { data: todayCampaigns } = await supabase
+                    .from('campaigns')
+                    .select('stats_sent, sent_at')
+                    .gte('sent_at', `${todayStr}T00:00:00.000Z`)
+                    .lte('sent_at', `${todayStr}T23:59:59.999Z`);
+
+                const calculatedUsage = todayCampaigns?.reduce((sum, c) => sum + (c.stats_sent || 0), 0) || 0;
+                let usageToDisplay = dbProfile?.emails_sent_today || 0;
+
+                // If DB has 0 or less than calculated, and reset date is correct, we update it.
+                // Or if DB reset date is old, we reset/update to calculated.
+                if (dbProfile && (dbProfile.last_reset_date !== todayStr || usageToDisplay < calculatedUsage)) {
+                    // Update DB with correct value
+                    await supabase.from('profiles').update({
+                        emails_sent_today: calculatedUsage,
+                        last_reset_date: todayStr
+                    }).eq('id', user.id);
+
+                    usageToDisplay = calculatedUsage;
+
+                    // Optimistically update the object we just fetched
+                    dbProfile.emails_sent_today = calculatedUsage;
+                    dbProfile.last_reset_date = todayStr;
+                }
+
                 setProfile({
                     ...dbProfile,
                     email: user.email,
@@ -53,6 +85,15 @@ function SettingsContent() {
                 });
 
                 setGmailConnected(!!dbProfile?.gmail_connected);
+
+                // Fetch Newsletter Status
+                try {
+                    const res = await fetch('/api/newsletter/subscribe');
+                    if (res.ok) {
+                        const data = await res.json();
+                        setNewsletterStatus(data.status);
+                    }
+                } catch (e) { console.error("Newsletter fetch error", e); }
 
             } catch (error) {
                 console.error(error);
@@ -63,6 +104,25 @@ function SettingsContent() {
 
         fetchProfile();
     }, [supabase, router, searchParams]);
+
+    const toggleNewsletter = async () => {
+        setIsNewsletterLoading(true);
+        const newStatus = newsletterStatus === 'subscribed' ? 'unsubscribed' : 'subscribed';
+        try {
+            const res = await fetch('/api/newsletter/subscribe', {
+                method: 'POST',
+                body: JSON.stringify({ status: newStatus }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!res.ok) throw new Error("Failed to update");
+            setNewsletterStatus(newStatus);
+            toast.success(newStatus === 'subscribed' ? "Subscribed to newsletter" : "Unsubscribed from newsletter");
+        } catch (e) {
+            toast.error("Failed to update subscription");
+        } finally {
+            setIsNewsletterLoading(false);
+        }
+    };
 
     const handleConnect = () => {
         // Redirect to API route
@@ -85,6 +145,27 @@ function SettingsContent() {
             toast.success("Gmail disconnected");
         } catch (e) {
             toast.error("Failed to disconnect");
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        try {
+            const res = await fetch('/api/user/delete', {
+                method: 'DELETE'
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to delete account');
+            }
+
+            toast.success("Account deleted successfully");
+            // Redirect to home after short delay
+            setTimeout(() => {
+                router.push('/');
+            }, 1500);
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete account");
         }
     };
 
@@ -210,22 +291,88 @@ function SettingsContent() {
                     </CardFooter>
                 </Card>
 
-                {/* Plan/Billing - Placeholder */}
-                <Card className="opacity-70 pointer-events-none grayscale">
-                    <CardHeader>
-                        <CardTitle className="flex justify-between">
-                            Subscription
-                            <Badge variant="secondary">Coming Soon</Badge>
-                        </CardTitle>
-                        <CardDescription>Manage your The Towncrier Pro plan.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="bg-muted h-32 rounded-lg flex items-center justify-center">
-                            PRO Plan Features
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="space-y-6">
+                    {/* Newsletter Preferences */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Mail className="h-5 w-5" />
+                                Newsletter
+                            </CardTitle>
+                            <CardDescription>Stay updated with feature releases and tips.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="space-y-0.5">
+                                    <h4 className="font-medium text-sm">Product Updates</h4>
+                                    <p className="text-xs text-muted-foreground">Receive improved workflows and tips.</p>
+                                </div>
+                                {newsletterStatus === 'subscribed' ? (
+                                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">Subscribed</Badge>
+                                ) : (
+                                    <Badge variant="outline" className="text-muted-foreground">Unsubscribed</Badge>
+                                )}
+                            </div>
+                        </CardContent>
+                        <CardFooter className="border-t pt-6">
+                            <Button
+                                variant={newsletterStatus === 'subscribed' ? "outline" : "default"}
+                                className="w-full"
+                                onClick={toggleNewsletter}
+                                disabled={isNewsletterLoading}
+                            >
+                                {isNewsletterLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {newsletterStatus === 'subscribed' ? "Unsubscribe" : "Subscribe to Newsletter"}
+                            </Button>
+                        </CardFooter>
+                    </Card>
+
+                    {/* Plan/Billing - Placeholder */}
+                    <Card className="opacity-70 pointer-events-none grayscale">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between">
+                                Subscription
+                                <Badge variant="secondary">Coming Soon</Badge>
+                            </CardTitle>
+                            <CardDescription>Manage your The Towncrier Pro plan.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="bg-muted h-32 rounded-lg flex items-center justify-center">
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
+
+            {/* Danger Zone */}
+            <Card className="border-destructive/50">
+                <CardHeader>
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        Danger Zone
+                    </CardTitle>
+                    <CardDescription>Irreversible and destructive actions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+                        <div className="space-y-1">
+                            <h4 className="font-medium text-sm">Delete Account</h4>
+                            <p className="text-xs text-muted-foreground">Permanently delete your account and all data. This cannot be undone.</p>
+                        </div>
+                        <Button
+                            variant="destructive"
+                            className="w-full sm:w-auto"
+                            onClick={() => {
+                                if (confirm("Are you absolutely sure? This will permanently delete your account and all campaigns, contacts, and data. This action cannot be undone.")) {
+                                    handleDeleteAccount();
+                                }
+                            }}
+                        >
+                            Delete Account
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

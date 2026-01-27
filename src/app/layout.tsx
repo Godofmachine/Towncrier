@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   },
 };
 
+import { validateEnv } from "@/lib/env";
+
+// Validate env vars on startup
+validateEnv();
+
 export default function RootLayout({
   children,
 }: Readonly<{

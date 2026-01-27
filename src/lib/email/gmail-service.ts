@@ -20,24 +20,51 @@ export async function getGmailClient(userId: string) {
         throw new Error("Gmail not connected");
     }
 
+    // SECURITY: Decrypt tokens if encrypted, otherwise use plain tokens (backward compatibility)
+    const { decryptToken } = await import('@/lib/crypto/encryption');
+
+    let accessToken: string;
+    let refreshToken: string;
+
+    if (tokenData.is_encrypted && tokenData.encrypted_access_token) {
+        // New encrypted format
+        accessToken = decryptToken(tokenData.encrypted_access_token);
+        refreshToken = tokenData.encrypted_refresh_token ? decryptToken(tokenData.encrypted_refresh_token) : '';
+    } else {
+        // Legacy plain text format (backward compatibility)
+        accessToken = tokenData.access_token;
+        refreshToken = tokenData.refresh_token;
+    }
+
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
         `${process.env.NEXT_PUBLIC_APP_URL}/api/gmail/callback`
     );
 
-    // 2. Set credentials
+    // 2. Set credentials (decrypted)
     oauth2Client.setCredentials({
-        access_token: tokenData.access_token, // In prod, decrypt this
-        refresh_token: tokenData.refresh_token, // In prod, decrypt this
+        access_token: accessToken,
+        refresh_token: refreshToken,
         expiry_date: new Date(tokenData.token_expiry).getTime(),
     });
 
-    // 3. Handle Token Refresh if needed
+    // 3. Handle Token Refresh - SECURITY: Encrypt new tokens
     oauth2Client.on('tokens', async (tokens) => {
         if (tokens.access_token) {
+            const { encryptToken } = await import('@/lib/crypto/encryption');
+
+            const encryptedAccessToken = encryptToken(tokens.access_token);
+            const encryptedRefreshToken = tokens.refresh_token ? encryptToken(tokens.refresh_token) : null;
+
             await supabaseAdmin.from("gmail_tokens").update({
+                // Keep old columns for backward compatibility
                 access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token || null,
+                // New encrypted columns
+                encrypted_access_token: encryptedAccessToken,
+                encrypted_refresh_token: encryptedRefreshToken,
+                is_encrypted: true,
                 token_expiry: new Date(tokens.expiry_date || Date.now() + 3600000).toISOString(),
                 updated_at: new Date().toISOString()
             }).eq("user_id", userId);

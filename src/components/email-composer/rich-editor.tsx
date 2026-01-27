@@ -109,7 +109,13 @@ export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onI
                     >
                         <X className="h-4 w-4" />
                     </Button>
-                    <AiAssistant onInsert={handleAiInsert} onSubjectGenerate={onSubjectGenerate} fromName={fromName} />
+                    <AiAssistant
+                        onInsert={handleAiInsert}
+                        onSubjectGenerate={onSubjectGenerate}
+                        fromName={fromName}
+                        currentEditorContent={content}
+                        availableVariables={variables?.map(v => v.key)}
+                    />
                 </div>
             )}
         </div>

@@ -8,10 +8,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, subDays, formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 
 export default function AdminDashboardPage() {
+    const router = useRouter();
     const [stats, setStats] = useState({
         totalUsers: 0,
+        totalCampaigns: 0,
         activeCampaigns: 0,
         emailsSentTotal: 0,
         systemHealth: "Unknown"
@@ -25,25 +28,60 @@ export default function AdminDashboardPage() {
         const fetchData = async () => {
             setIsLoading(true);
 
-            // 1. Fetch Users Count (Profiles)
-            // Note: This might be limited by RLS to only the current user unless Admin RLS is set up.
-            const { count: usersCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-
-            // 2. Fetch Campaigns Stats
-            const { data: campaigns } = await supabase
-                .from('campaigns')
-                .select('stats_sent, status');
-
-            let totalEmailsSent = 0;
-            let activeCampaignsCount = 0;
-
-            if (campaigns) {
-                totalEmailsSent = campaigns.reduce((acc, curr) => acc + (curr.stats_sent || 0), 0);
-                activeCampaignsCount = campaigns.filter(c => c.status === 'sending' || c.status === 'scheduled').length;
-                // If "active" just means total campaigns in the system (since active might be rare), we could use length
-                // sticking to strict "active" definition for now, or fallback to total campaigns if 0
-                if (activeCampaignsCount === 0) activeCampaignsCount = campaigns.length;
+            // SECURITY: Verify admin access
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                router.push('/login');
+                return;
             }
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+                router.push('/dashboard');
+                return;
+            }
+
+            // 1. Fetch Users Count (Profiles)
+            const { count: usersCount } = await supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
+
+            // 2. Fetch Campaigns Stats (AGGREGATED - No sensitive content)
+            const { count: totalCampaignsCount } = await supabase
+                .from('campaigns')
+                .select('*', { count: 'exact', head: true });
+
+            const { count: activeCampaignsCount } = await supabase
+                .from('campaigns')
+                .select('*', { count: 'exact', head: true })
+                .in('status', ['sending', 'scheduled']);
+
+            // Get total emails from campaigns stats_sent (aggregated sum)
+            const { data: campaignStats } = await supabase
+                .from('campaigns')
+                .select('stats_sent');
+
+            const campaignStatsTotal = campaignStats?.reduce((acc, curr) => acc + (curr.stats_sent || 0), 0) || 0;
+
+            // Count total sent events (no user data)
+            const { count: sentEventsCount } = await supabase
+                .from('email_events')
+                .select('*', { count: 'exact', head: true })
+                .eq('event_type', 'sent');
+
+            const totalEmailsSent = Math.max(campaignStatsTotal, sentEventsCount || 0);
+
+            console.log('Admin Dashboard Stats (Privacy-Safe):', {
+                totalUsers: usersCount,
+                totalCampaigns: totalCampaignsCount,
+                activeCampaigns: activeCampaignsCount,
+                emailsSent: totalEmailsSent
+            });
 
             // 3. Chart Data (Last 7 Days System-wide)
             const today = new Date();
@@ -52,6 +90,12 @@ export default function AdminDashboardPage() {
                 return format(d, 'MMM dd');
             });
 
+            // Fetch recent campaigns to backfill 'Sent' counts where events might be missing
+            const { data: recentCampaignsData } = await supabase
+                .from('campaigns')
+                .select('stats_sent, sent_at')
+                .gte('sent_at', subDays(today, 7).toISOString());
+
             const { data: events } = await supabase
                 .from('email_events')
                 .select('created_at, event_type')
@@ -59,40 +103,54 @@ export default function AdminDashboardPage() {
 
             const dailyData = last7Days.map(day => {
                 const dayEvents = events?.filter(e => format(new Date(e.created_at), 'MMM dd') === day) || [];
+
+                // Calculate sent from campaigns on this day
+                const dayCampaigns = recentCampaignsData?.filter(c => c.sent_at && format(new Date(c.sent_at), 'MMM dd') === day) || [];
+                const campaignsSentCount = dayCampaigns.reduce((sum, c) => sum + (c.stats_sent || 0), 0);
+                const eventsSentCount = dayEvents.filter(e => e.event_type === 'sent').length;
+
                 // Admin cares about total volume
                 return {
                     name: day,
-                    activity: dayEvents.length,
-                    sent: dayEvents.filter(e => e.event_type === 'sent').length
+                    activity: dayEvents.length, // Activity generally implies interaction (opens/clicks) + sends. 
+                    // If we have "phantom" sends from campaigns, we should probably add them to activity score?
+                    // For now, let's keep activity as "Events logged" but fix 'sent'.
+                    // Actually, if we correct 'sent', we should probably bump activity too if it's lagging.
+                    sent: Math.max(campaignsSentCount, eventsSentCount)
                 };
             });
             setChartData(dailyData);
 
-            // 4. Recent Events (Feed)
-            const { data: recentEvents } = await supabase
+            // 4. Recent Activity Summary (Privacy-Safe - No campaign names or user data)
+            const { count: recentSentCount } = await supabase
                 .from('email_events')
-                .select('*, campaigns(name)')
-                .order('created_at', { ascending: false })
-                .limit(10);
+                .select('*', { count: 'exact', head: true })
+                .eq('event_type', 'sent')
+                .gte('created_at', subDays(today, 1).toISOString());
 
-            if (recentEvents) {
-                // Mapping to the UI model
-                const mappedEvents = recentEvents?.map(e => ({
-                    id: e.id,
-                    event: e.event_type === 'sent' ? 'Email Sent' :
-                        e.event_type === 'opened' ? 'Email Opened' :
-                            e.event_type === 'clicked' ? 'Link Clicked' :
-                                e.event_type === 'bounced' ? 'Email Bounced' : 'Activity',
-                    user: e.recipient_id ? 'Recipient' : 'System', // We don't have user emails easily here without joining recipients
-                    detail: e.campaigns?.name || 'Unknown Campaign',
-                    time: formatDistanceToNow(new Date(e.created_at), { addSuffix: true }),
-                    type: e.event_type === 'bounced' ? 'warning' : 'success'
-                })) || [];
-                setRecentSystemEvents(mappedEvents);
-            }
+            const { count: recentOpenCount } = await supabase
+                .from('email_events')
+                .select('*', { count: 'exact', head: true })
+                .eq('event_type', 'opened')
+                .gte('created_at', subDays(today, 1).toISOString());
+
+            const { count: recentClickCount } = await supabase
+                .from('email_events')
+                .select('*', { count: 'exact', head: true })
+                .eq('event_type', 'clicked')
+                .gte('created_at', subDays(today, 1).toISOString());
+
+            // Set anonymized recent activity (last 24h)
+            const anonymizedActivity = [
+                { id: '1', event: 'Emails Sent', count: recentSentCount || 0, time: 'Last 24h', type: 'success' },
+                { id: '2', event: 'Emails Opened', count: recentOpenCount || 0, time: 'Last 24h', type: 'success' },
+                { id: '3', event: 'Links Clicked', count: recentClickCount || 0, time: 'Last 24h', type: 'success' },
+            ];
+            setRecentSystemEvents(anonymizedActivity);
 
             setStats({
                 totalUsers: usersCount || 0,
+                totalCampaigns: totalCampaignsCount,
                 activeCampaigns: activeCampaignsCount,
                 emailsSentTotal: totalEmailsSent,
                 systemHealth: "Operational"
@@ -165,9 +223,9 @@ export default function AdminDashboardPage() {
                         <Megaphone className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeCampaigns}</div>
+                        <div className="text-2xl font-bold">{stats.totalCampaigns}</div>
                         <p className="text-xs text-muted-foreground">
-                            Total / Active
+                            {stats.activeCampaigns} active
                         </p>
                     </CardContent>
                 </Card>
@@ -219,12 +277,12 @@ export default function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* System Events Feed */}
+                {/* System Activity Summary */}
                 <Card className="col-span-3">
                     <CardHeader>
-                        <CardTitle>Recent Events</CardTitle>
+                        <CardTitle>Platform Activity (Last 24h)</CardTitle>
                         <CardDescription>
-                            Recent email activity log.
+                            Aggregated email activity statistics - privacy protected.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -232,22 +290,24 @@ export default function AdminDashboardPage() {
                             {recentSystemEvents.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-10">No recent activity.</p>
                             ) : (
-                                recentSystemEvents.map((event) => (
-                                    <div key={event.id} className="flex items-start space-x-4">
-                                        <div className={`mt-1 h-2 w-2 rounded-full ring-2 ring-offset-2 ${event.type === 'success' ? 'bg-green-500 ring-green-100' :
-                                            event.type === 'warning' ? 'bg-amber-500 ring-amber-100' :
-                                                'bg-blue-500 ring-blue-100'
-                                            }`} />
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium leading-none">
-                                                {event.event}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                <span className="font-medium text-foreground">{event.detail}</span>
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground pt-1">
-                                                {event.time}
-                                            </p>
+                                recentSystemEvents.map((activity) => (
+                                    <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                        <div className="flex items-start space-x-4">
+                                            <div className={`mt-1 h-2 w-2 rounded-full ring-2 ring-offset-2 ${activity.type === 'success' ? 'bg-green-500 ring-green-100' :
+                                                activity.type === 'warning' ? 'bg-amber-500 ring-amber-100' :
+                                                    'bg-blue-500 ring-blue-100'
+                                                }`} />
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium leading-none">
+                                                    {activity.event}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground pt-1">
+                                                    {activity.time}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-2xl font-bold text-primary">
+                                            {(activity as any).count || 0}
                                         </div>
                                     </div>
                                 ))

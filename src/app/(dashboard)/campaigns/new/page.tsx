@@ -47,15 +47,105 @@ function CampaignEditor() {
     const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [contacts, setContacts] = useState<any[]>([]);
+    const [groups, setGroups] = useState<any[]>([]);
     // Attachments State
     const [attachments, setAttachments] = useState<{ filename: string; content: string; contentType: string; size: number }[]>([]);
     const [isSending, setIsSending] = useState(false);
+    const [isTestSending, setIsTestSending] = useState(false);
+
+    const handleTestSend = async () => {
+        setIsTestSending(true);
+        try {
+            const res = await fetch("/api/campaigns/test", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    subject,
+                    content,
+                    fromName,
+                    attachments: attachments.map(a => ({
+                        name: a.filename,
+                        // We assume attachments in state have base64 content if added via the UI helper
+                        // If not, real implementation needs to ensure base64 is present
+                        base64: a.content || "",
+                        type: a.contentType
+                    }))
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to send test");
+
+            toast.success("Test email sent to your inbox!");
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsTestSending(false);
+        }
+    };
     const [isContactsLoading, setIsContactsLoading] = useState(false);
     const [missingVariables, setMissingVariables] = useState<{ contactId: string; missing: string[] }[]>([]);
     const [previewContactId, setPreviewContactId] = useState<string>("");
 
-    // Groups State
-    const [groups, setGroups] = useState<any[]>([]);
+
+    // Auto-Save Logic
+    const debouncedSave = useDebouncedCallback(async () => {
+        if (!name && !subject && !content) return; // Don't save empty drafts
+
+        setSaveStatus('saving');
+        try {
+            const payload = {
+                name: name || "Untitled Draft",
+                subject,
+                content,
+                from_name: fromName,
+                status: 'draft',
+                // other fields if needed
+            };
+
+            if (campaignId) {
+                // Update existing
+                const { error } = await supabase
+                    .from('campaigns')
+                    .update(payload)
+                    .eq('id', campaignId);
+
+                if (error) throw error;
+            } else {
+                // Create new
+                // We need userID. Client supabase handles auth automatically for RLS? 
+                // Alternatively, call an API route. 
+                // Let's use direct Supabase client which has user context if logged in.
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const { data, error } = await supabase
+                    .from('campaigns')
+                    .insert({ ...payload, user_id: user.id })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    setCampaignId(data.id);
+                    // Update URL without reload
+                    window.history.replaceState(null, '', `?draft_id=${data.id}`);
+                }
+            }
+            setSaveStatus('saved');
+        } catch (error) {
+            console.error("Auto-save failed:", error);
+            setSaveStatus('unsaved');
+        }
+    }, 1000);
+
+    // Trigger auto-save on core field changes
+    useEffect(() => {
+        if (name || subject || content) {
+            setSaveStatus('unsaved');
+            debouncedSave();
+        }
+    }, [name, subject, content, fromName, debouncedSave]);
     const [selectedGroupId, setSelectedGroupId] = useState<string>("");
 
     // Auto-Save Logic (1.5s debounce)
@@ -701,7 +791,18 @@ function CampaignEditor() {
                             {step === 4 && (
                                 <div className="space-y-6 max-w-2xl mx-auto py-6 animate-in slide-in-from-right-10 fade-in duration-300">
                                     <div className="bg-muted/30 p-6 rounded-lg space-y-4 border">
-                                        <h3 className="font-semibold text-lg border-b pb-2">Campaign Summary</h3>
+                                        <div className="flex justify-between items-center border-b pb-2">
+                                            <h3 className="font-semibold text-lg">Campaign Summary</h3>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleTestSend}
+                                                disabled={isTestSending}
+                                            >
+                                                {isTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                                                Send Test to Me
+                                            </Button>
+                                        </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Summary Details */}
                                             <div>
@@ -739,7 +840,7 @@ function CampaignEditor() {
                                             <div className="flex items-center gap-2">
                                                 <Label className="text-xs">Preview as:</Label>
                                                 <Select value={previewContactId} onValueChange={setPreviewContactId}>
-                                                    <SelectTrigger className="w-[200px] h-8 text-xs">
+                                                    <SelectTrigger className="w-[140px] sm:w-[200px] h-8 text-xs">
                                                         <SelectValue placeholder="Select contact to preview..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -763,7 +864,7 @@ function CampaignEditor() {
                                                 </Select>
                                             </div>
                                         </div>
-                                        <div className="border rounded-md p-6 bg-white dark:bg-zinc-900 min-h-[200px] prose dark:prose-invert max-w-none shadow-sm">
+                                        <div className="border rounded-md p-4 sm:p-6 bg-white dark:bg-zinc-900 min-h-[200px] prose dark:prose-invert max-w-none shadow-sm overflow-x-auto">
                                             <div dangerouslySetInnerHTML={{
                                                 __html: (() => {
                                                     if (!previewContactId || previewContactId === 'raw_template') return content;
@@ -844,21 +945,22 @@ function CampaignEditor() {
                             )}
                         </CardContent>
 
-                        <div className="p-6 border-t flex justify-between bg-muted/10">
+                        <div className="p-4 sm:p-6 border-t flex flex-wrap gap-4 justify-between bg-muted/10">
                             <Button
                                 variant="ghost"
                                 onClick={() => setStep(s => Math.max(1, s - 1))}
                                 disabled={step === 1 || isSending}
+                                className="order-1"
                             >
                                 <ChevronLeft className="mr-2 h-4 w-4" /> Back
                             </Button>
 
                             {step < 4 ? (
-                                <Button onClick={() => setStep(s => Math.min(4, s + 1))}>
+                                <Button onClick={() => setStep(s => Math.min(4, s + 1))} className="order-2">
                                     Next Step <ChevronRight className="ml-2 h-4 w-4" />
                                 </Button>
                             ) : (
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 order-2">
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="outline" disabled={isSending}>

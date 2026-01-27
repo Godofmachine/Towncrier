@@ -11,7 +11,8 @@ import {
     Settings,
     LogOut,
     Users,
-    Shield
+    Shield,
+    Mail
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -43,6 +44,12 @@ export function AdminSidebar({ className, onNavigate }: SidebarProps) {
             active: pathname.startsWith("/admin/campaigns"),
         },
         {
+            label: "Newsletter",
+            icon: Mail,
+            href: "/admin/newsletter",
+            active: pathname.startsWith("/admin/newsletter"),
+        },
+        {
             label: "System Settings",
             icon: Settings,
             href: "/admin/settings",
@@ -54,12 +61,40 @@ export function AdminSidebar({ className, onNavigate }: SidebarProps) {
         <div className={cn("pb-12 h-screen border-r bg-sidebar", className)}>
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
-                    <Link href="/admin" className="flex items-center pl-3 mb-14" onClick={onNavigate}>
+                    <Link href="/" className="flex items-center pl-3 mb-14" onClick={onNavigate}>
                         <div className="mr-2">
                             <Image src="/logo.svg" alt="The Towncrier" width={32} height={32} className="h-8 w-8 object-contain" />
                         </div>
                         <h1 className="text-xl font-bold">The Towncrier <span className="text-xs font-normal bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1 align-middle">Admin</span></h1>
                     </Link>
+
+                    <div className="mb-4 p-3 bg-muted/50 rounded-lg border">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">Dashboard Mode</p>
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start mb-2"
+                            onClick={onNavigate}
+                        >
+                            <Link href="/dashboard">
+                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                Client Dashboard
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            variant="secondary"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={onNavigate}
+                        >
+                            <Link href="/admin">
+                                <Shield className="mr-2 h-4 w-4" />
+                                Admin Dashboard
+                            </Link>
+                        </Button>
+                    </div>
                     <div className="space-y-1">
                         {routes.map((route) => (
                             <Button

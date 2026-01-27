@@ -15,10 +15,23 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { LogOut, LayoutDashboard } from "lucide-react";
+import { LogOut, LayoutDashboard, Shield } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function Header() {
     const [user, setUser] = useState<any>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
     const supabase = createClient();
     const router = useRouter();
 
@@ -26,11 +39,25 @@ export function Header() {
         const getUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
+
+            // Check if user is admin
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                setIsAdmin(profile?.role === 'admin' || profile?.role === 'superadmin');
+            }
         };
         getUser();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
+            if (!session?.user) {
+                setIsAdmin(false);
+            }
         });
 
         return () => subscription.unsubscribe();
@@ -55,16 +82,43 @@ export function Header() {
             <div className="flex items-center gap-4">
                 {user ? (
                     <>
-                        <Link href="/dashboard">
-                            <Button variant="outline" size="sm" className="hidden sm:flex">
-                                <LayoutDashboard className="mr-2 h-4 w-4" />
-                                Dashboard
-                            </Button>
-                            {/* Mobile Icon Only */}
-                            <Button variant="outline" size="icon" className="flex sm:hidden">
-                                <LayoutDashboard className="h-4 w-4" />
-                            </Button>
-                        </Link>
+                        {isAdmin ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                                        <span className="hidden sm:inline">Dashboard</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Select Dashboard</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/dashboard" className="cursor-pointer">
+                                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                                            Client Dashboard
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/admin" className="cursor-pointer">
+                                            <Shield className="mr-2 h-4 w-4" />
+                                            Admin Dashboard
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <Link href="/dashboard">
+                                <Button variant="outline" size="sm" className="hidden sm:flex">
+                                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                                    Dashboard
+                                </Button>
+                                {/* Mobile Icon Only */}
+                                <Button variant="outline" size="icon" className="flex sm:hidden">
+                                    <LayoutDashboard className="h-4 w-4" />
+                                </Button>
+                            </Link>
+                        )}
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -92,12 +146,32 @@ export function Header() {
                                     <Link href="/settings">Settings</Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
+                                <DropdownMenuItem onSelect={(e) => {
+                                    e.preventDefault();
+                                    setLogoutDialogOpen(true);
+                                }} className="text-red-600 focus:text-red-600">
                                     <LogOut className="mr-2 h-4 w-4" />
                                     Log out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
+                        <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you sure you want to log out? Any unsaved changes will be lost.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleSignOut}>
+                                        Log Out
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </>
                 ) : (
                     <Link href="/signup">

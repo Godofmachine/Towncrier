@@ -45,13 +45,24 @@ export async function GET(request: Request) {
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
-        // Store Tokens
+        // SECURITY: Encrypt tokens before storing
+        const { encryptToken } = await import('@/lib/crypto/encryption');
+
+        const encryptedAccessToken = encryptToken(tokens.access_token!);
+        const encryptedRefreshToken = tokens.refresh_token ? encryptToken(tokens.refresh_token) : null;
+
+        // Store Encrypted Tokens
         const { error: dbError } = await supabaseAdmin
             .from('gmail_tokens')
             .upsert({
                 user_id: user.id,
+                // Keep old columns for backward compatibility during migration
                 access_token: tokens.access_token,
                 refresh_token: tokens.refresh_token,
+                // New encrypted columns
+                encrypted_access_token: encryptedAccessToken,
+                encrypted_refresh_token: encryptedRefreshToken,
+                is_encrypted: true,
                 token_expiry: new Date(tokens.expiry_date || Date.now() + 3600000).toISOString(),
                 scope: tokens.scope
             }, { onConflict: 'user_id' });

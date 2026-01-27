@@ -64,12 +64,18 @@ export default function DashboardPage() {
                 bounceRate = totalSent > 0 ? Math.round((totalBounced / totalSent) * 100) : 0;
             }
 
-            // 4. Chart Data (Mock/Real Hybrid)
+            // 4. Chart Data (Hybrid: Use Campaign Stats for 'Sent' reliability, Events for engagement)
             const today = new Date();
             const last7Days = Array.from({ length: 7 }, (_, i) => {
                 const d = subDays(today, 6 - i);
                 return format(d, 'MMM dd');
             });
+
+            // Fetch recent campaigns to backfill 'Sent' counts where events might be missing
+            const { data: recentCampaignsData } = await supabase
+                .from('campaigns')
+                .select('stats_sent, sent_at')
+                .gte('sent_at', subDays(today, 7).toISOString());
 
             const { data: events } = await supabase
                 .from('email_events')
@@ -78,9 +84,17 @@ export default function DashboardPage() {
 
             const dailyData = last7Days.map(day => {
                 const dayEvents = events?.filter(e => format(new Date(e.created_at), 'MMM dd') === day) || [];
+
+                // Calculate sent from campaigns on this day (more reliable if events weren't logged)
+                const dayCampaigns = recentCampaignsData?.filter(c => c.sent_at && format(new Date(c.sent_at), 'MMM dd') === day) || [];
+                const campaignsSentCount = dayCampaigns.reduce((sum, c) => sum + (c.stats_sent || 0), 0);
+
+                // Use the larger of the two (Events vs Campaign Stats) to capture both granular and aggregate data
+                const eventsSentCount = dayEvents.filter(e => e.event_type === 'sent').length;
+
                 return {
                     name: day,
-                    sent: dayEvents.filter(e => e.event_type === 'sent').length,
+                    sent: Math.max(campaignsSentCount, eventsSentCount),
                     opened: dayEvents.filter(e => e.event_type === 'opened').length,
                     clicked: dayEvents.filter(e => e.event_type === 'clicked').length
                 };
@@ -100,7 +114,7 @@ export default function DashboardPage() {
                 recipients: recipientsCount.count || 0,
                 groups: groupsCount.count || 0,
                 campaigns: campaignsCount.count || 0,
-                emailsSentToday: profile?.emails_sent_today || 0,
+                emailsSentToday: dailyData.find(d => d.name === format(today, 'MMM dd'))?.sent || 0,
                 totalSent,
                 openRate,
                 clickRate,
