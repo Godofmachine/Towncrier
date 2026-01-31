@@ -7,19 +7,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RecipientForm } from "@/components/recipients/recipient-form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 
 export default function NewRecipientPage() {
     const router = useRouter();
 
+    const supabase = createClient();
+    const [isLoading, setIsLoading] = useState(false);
+
     const handleCreateContact = async (data: any) => {
-        // Placeholder - will connect to Supabase
-        console.log("Creating contact:", data);
+        setIsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                toast.error("You must be logged in");
+                return;
+            }
 
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+            const { error } = await supabase
+                .from('recipients')
+                .insert({
+                    ...data,
+                    user_id: user.id,
+                    status: 'active'
+                });
 
-        toast.success("Contact added successfully");
-        router.push("/recipients");
+            if (error) throw error;
+
+            toast.success("Contact added successfully");
+            router.push("/recipients");
+            router.refresh();
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Failed to create contact");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -46,7 +70,7 @@ export default function NewRecipientPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <RecipientForm onSubmit={handleCreateContact} />
+                    <RecipientForm onSubmit={handleCreateContact} isLoading={isLoading} />
                 </CardContent>
             </Card>
         </div>

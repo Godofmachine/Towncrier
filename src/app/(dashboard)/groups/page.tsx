@@ -12,12 +12,16 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function GroupsPage() {
+    const router = useRouter(); // Import at top level if not present, though this is a full snippet replacement it might be missing imports if not careful. Assuming Component is valid.
+    /* Wait, I cannot see the imports in the ReplacementContent context easily without context lines. 
+       Use imports from existing file. Check previous view_file. */
     const [groups, setGroups] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingGroup, setEditingGroup] = useState<any | null>(null);
@@ -30,10 +34,21 @@ export default function GroupsPage() {
         // Assuming 'broadcast_groups' table exists as per schema
         const { data } = await supabase
             .from('broadcast_groups')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select('*, group_members(count)'); // Get count of members
+        // Order logic
+        // .order('created_at', { ascending: false }); 
+        // We need to re-sort manually if Supabase doesn't support easy ordering on basic cols with deep select without weird syntax.
+        // But simple order normally works on the main table.
 
-        if (data) setGroups(data);
+        if (data) {
+            // Map count properly
+            const formatted = data.map((g: any) => ({
+                ...g,
+                member_count: g.group_members ? g.group_members[0]?.count : 0
+            })).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            setGroups(formatted);
+        }
         setIsLoading(false);
     };
 
@@ -85,34 +100,40 @@ export default function GroupsPage() {
                 ) : (
                     <>
                         {groups.map((group) => (
-                            <Card key={group.id} className="hover:border-primary/50 transition-colors group relative">
+                            <Card
+                                key={group.id}
+                                className="hover:border-primary/50 transition-colors group relative cursor-pointer"
+                                onClick={() => router.push(`/groups/${group.id}`)}
+                            >
                                 <CardHeader className="pb-2">
                                     <div className="flex justify-between items-start">
                                         <div className={`h-2 w-12 rounded-full bg-blue-500 mb-3 opacity-80`} />
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/groups/${group.id}`} className="cursor-pointer">
-                                                        Manage Members
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setEditingGroup(group)}>
-                                                    Edit Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingGroupId(group.id)}>
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/groups/${group.id}`} className="cursor-pointer">
+                                                            Manage Members
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setEditingGroup(group)}>
+                                                        Edit Details
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => setDeletingGroupId(group.id)}>
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
-                                    <Link href={`/groups/${group.id}`} className="hover:underline">
+                                    <div className="hover:underline"> {/* Link logic handled by Card onClick, but keeping visual style */}
                                         <CardTitle className="text-xl">{group.name}</CardTitle>
-                                    </Link>
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex gap-2 mb-4">
@@ -124,12 +145,14 @@ export default function GroupsPage() {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-2">
-                                    <Button variant="outline" className="w-full" size="sm" asChild>
-                                        <Link href={`/campaigns/new?groupId=${group.id}`}>
-                                            <Mail className="mr-2 h-3 w-3" />
-                                            Send Campaign
-                                        </Link>
-                                    </Button>
+                                    <div onClick={(e) => e.stopPropagation()} className="w-full">
+                                        <Button variant="outline" className="w-full" size="sm" asChild>
+                                            <Link href={`/campaigns/new?groupId=${group.id}`}>
+                                                <Mail className="mr-2 h-3 w-3" />
+                                                Send Campaign
+                                            </Link>
+                                        </Button>
+                                    </div>
                                 </CardFooter>
                             </Card>
                         ))}
@@ -158,7 +181,7 @@ export default function GroupsPage() {
                 open={!!deletingGroupId}
                 onOpenChange={(open) => !open && setDeletingGroupId(null)}
                 title="Delete Group?"
-                description="This will permanently delete the group. Members will not be deleted, only their association with this group."
+                description="This will permanently delete the group and its associations. Contacts will remain."
                 onConfirm={deleteGroup}
                 isLoading={isDeleting}
                 variant="destructive"

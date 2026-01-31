@@ -26,7 +26,8 @@ export default function AnalyticsPage() {
             // 1. Fetch Aggregated Campaign Stats
             const { data: campaigns } = await supabase
                 .from('campaigns')
-                .select('stats_sent, stats_opened, stats_clicked, stats_bounced');
+                .select('stats_sent, stats_opened, stats_clicked, stats_bounced')
+                .neq('status', 'draft');
 
             if (campaigns && campaigns.length > 0) {
                 const totalSent = campaigns.reduce((acc, curr) => acc + (curr.stats_sent || 0), 0);
@@ -203,9 +204,9 @@ export default function AnalyticsPage() {
                                 recentActivity.map((event) => (
                                     <div key={event.id} className="flex items-start space-x-4">
                                         <div className={`mt-1 h-2 w-2 rounded-full ring-2 ring-offset-2 ${event.event_type === 'opened' ? 'bg-green-500 ring-green-100' :
-                                                event.event_type === 'clicked' ? 'bg-blue-500 ring-blue-100' :
-                                                    event.event_type === 'bounced' ? 'bg-red-500 ring-red-100' :
-                                                        'bg-gray-400 ring-gray-100'
+                                            event.event_type === 'clicked' ? 'bg-blue-500 ring-blue-100' :
+                                                event.event_type === 'bounced' ? 'bg-red-500 ring-red-100' :
+                                                    'bg-gray-400 ring-gray-100'
                                             }`} />
                                         <div className="space-y-1">
                                             <p className="text-sm font-medium leading-none">

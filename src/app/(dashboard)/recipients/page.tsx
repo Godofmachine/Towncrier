@@ -24,6 +24,8 @@ import { EditRecipientDialog } from "@/components/recipients/edit-dialog";
 import { AddToGroupDialog } from "@/components/groups/add-to-group-dialog";
 import { Users } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VariablesTab } from "@/components/recipients/variables-tab";
 
 export default function RecipientsPage() {
     const [recipients, setRecipients] = useState<any[]>([]);
@@ -115,7 +117,7 @@ export default function RecipientsPage() {
                             </Button>
                         </>
                     )}
-                    <ImportRecipientsButton />
+                    <ImportRecipientsButton onSuccess={fetchRecipients} />
                     <Button asChild>
                         <Link href="/recipients/new">
                             <Plus className="mr-2 h-4 w-4" />
@@ -135,101 +137,121 @@ export default function RecipientsPage() {
                 }}
             />
 
-            <Card>
-                <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-medium">All Contacts ({recipients.length})</CardTitle>
-                        <div className="flex items-center gap-2 w-full max-w-sm">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search by email or name..."
-                                    className="pl-9 h-9"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
+            <Tabs defaultValue="contacts" className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="contacts">Contacts</TabsTrigger>
+                    <TabsTrigger value="variables">Variables</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="contacts">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg font-medium">All Contacts ({recipients.length})</CardTitle>
+                                <div className="flex items-center gap-2 w-full max-w-sm">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Search by email or name..."
+                                            className="pl-9 h-9"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                    <Button variant="outline" size="icon" className="h-9 w-9">
+                                        <Filter className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                            <Button variant="outline" size="icon" className="h-9 w-9">
-                                <Filter className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[40px]">
-                                    <Checkbox
-                                        checked={filteredRecipients.length > 0 && selectedIds.size === filteredRecipients.length}
-                                        onCheckedChange={toggleAll}
-                                    />
-                                </TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Custom Fields</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : filteredRecipients.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                        No recipients found.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredRecipients.map((recipient) => (
-                                    <TableRow key={recipient.id}>
-                                        <TableCell>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[40px]">
                                             <Checkbox
-                                                checked={selectedIds.has(recipient.id)}
-                                                onCheckedChange={() => toggleSelection(recipient.id)}
+                                                checked={filteredRecipients.length > 0 && selectedIds.size === filteredRecipients.length}
+                                                onCheckedChange={toggleAll}
                                             />
-                                        </TableCell>
-                                        <TableCell className="font-medium">{recipient.email}</TableCell>
-                                        <TableCell>{recipient.first_name} {recipient.last_name}</TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-1 flex-wrap max-w-[200px]">
-                                                {recipient.custom_fields && Object.keys(recipient.custom_fields).slice(0, 3).map((key: string) => (
-                                                    <Badge key={key} variant="outline" className="text-[10px] bg-muted/50 font-normal">
-                                                        {key}: {recipient.custom_fields[key]}
-                                                    </Badge>
-                                                ))}
-                                                {recipient.custom_fields && Object.keys(recipient.custom_fields).length > 3 && (
-                                                    <span className="text-[10px] text-muted-foreground">+{Object.keys(recipient.custom_fields).length - 3} more</span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                                <span className="text-sm">Active</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setEditingRecipient(recipient)}
-                                            >
-                                                Edit
-                                            </Button>
-                                        </TableCell>
+                                        </TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Custom Fields</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center">
+                                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : filteredRecipients.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                                                No recipients found.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredRecipients.map((recipient) => (
+                                            <TableRow key={recipient.id}>
+                                                <TableCell>
+                                                    <Checkbox
+                                                        checked={selectedIds.has(recipient.id)}
+                                                        onCheckedChange={() => toggleSelection(recipient.id)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="font-medium">{recipient.email}</TableCell>
+                                                <TableCell>{recipient.first_name} {recipient.last_name}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-1 flex-wrap max-w-[200px]">
+                                                        {recipient.custom_fields && Object.keys(recipient.custom_fields).slice(0, 3).map((key: string) => (
+                                                            <Badge key={key} variant="outline" className="text-[10px] bg-muted/50 font-normal">
+                                                                {key}: {recipient.custom_fields[key]}
+                                                            </Badge>
+                                                        ))}
+                                                        {recipient.custom_fields && Object.keys(recipient.custom_fields).length > 3 && (
+                                                            <span className="text-[10px] text-muted-foreground">+{Object.keys(recipient.custom_fields).length - 3} more</span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                        <span className="text-sm">Active</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setEditingRecipient(recipient)}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="variables">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg font-medium">Manage Variables</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <VariablesTab recipients={recipients} onUpdate={fetchRecipients} />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             <EditRecipientDialog
                 recipient={editingRecipient}

@@ -27,6 +27,7 @@ function CampaignEditor() {
     const searchParams = useSearchParams();
     const sourceCampaignId = searchParams.get('source_campaign_id');
     const draftId = searchParams.get('draft_id');
+    const groupIdParam = searchParams.get('groupId');
 
     // State
     const [step, setStep] = useState(1);
@@ -41,7 +42,7 @@ function CampaignEditor() {
     const [fromName, setFromName] = useState("John Doe");
     const [subject, setSubject] = useState("");
     const [content, setContent] = useState("");
-    const [recipientType, setRecipientType] = useState("all");
+    const [recipientType, setRecipientType] = useState(groupIdParam ? 'group' : 'all');
 
     // Specific Recipients Selection State
     const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
@@ -146,7 +147,7 @@ function CampaignEditor() {
             debouncedSave();
         }
     }, [name, subject, content, fromName, debouncedSave]);
-    const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+    const [selectedGroupId, setSelectedGroupId] = useState<string>(groupIdParam || "");
 
     // Auto-Save Logic (1.5s debounce)
     const autoSave = useDebouncedCallback(async () => {
@@ -242,6 +243,19 @@ function CampaignEditor() {
                 });
         }
     }, [recipientType, contacts.length, supabase]);
+
+    // Also fetch contacts on mount to extract custom_fields for variables dropdown
+    useEffect(() => {
+        if (contacts.length === 0) {
+            supabase
+                .from('recipients')
+                .select('*')
+                .limit(100) // Limit to first 100 to get custom field keys without loading all data
+                .then(({ data }) => {
+                    if (data && contacts.length === 0) setContacts(data);
+                });
+        }
+    }, [supabase]);
 
     // Fetch groups
     useEffect(() => {
@@ -742,12 +756,11 @@ function CampaignEditor() {
                                                 { key: 'email', label: 'Email Address' }
                                             ];
 
-                                            // 2. Extract custom fields if we have specific contacts selected
+                                            // 2. Extract custom fields from ALL contacts loaded or fetch them
                                             let customVars: any[] = [];
-                                            if (recipientType === 'specific' && contacts.length > 0) {
-                                                // Get all unique custom field keys from selected contacts
-                                                // or just all loaded contacts if none selected yet (though selected is preferred context)
-                                                // Let's use all loaded contacts to show what's *possible*
+
+                                            // Load from contacts if available (for specific type)
+                                            if (contacts.length > 0) {
                                                 const allKeys = new Set<string>();
                                                 contacts.forEach(c => {
                                                     if (c.custom_fields) {
@@ -757,12 +770,12 @@ function CampaignEditor() {
 
                                                 customVars = Array.from(allKeys).map(key => ({
                                                     key,
-                                                    label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Title Case
+                                                    label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                                                     isCustom: true
                                                 }));
                                             }
 
-                                            // 3. Extract any variables *already used* in the content (so "Add new variable" ones persist in dropdown)
+                                            // 3. Extract any variables *already used* in the content
                                             const contentPattern = /{{([^}]+)}}/g;
                                             const contentVars = new Set<string>();
                                             let match;
@@ -770,7 +783,6 @@ function CampaignEditor() {
                                                 contentVars.add(match[1]);
                                             }
 
-                                            // Add used content variables if not already present
                                             const usedVarsArray = Array.from(contentVars).map(key => ({
                                                 key,
                                                 label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -948,7 +960,13 @@ function CampaignEditor() {
                         <div className="p-4 sm:p-6 border-t flex flex-wrap gap-4 justify-between bg-muted/10">
                             <Button
                                 variant="ghost"
-                                onClick={() => setStep(s => Math.max(1, s - 1))}
+                                onClick={() => {
+                                    if (step === 3 && groupIdParam) {
+                                        setStep(1);
+                                    } else {
+                                        setStep(s => Math.max(1, s - 1));
+                                    }
+                                }}
                                 disabled={step === 1 || isSending}
                                 className="order-1"
                             >
@@ -956,7 +974,13 @@ function CampaignEditor() {
                             </Button>
 
                             {step < 4 ? (
-                                <Button onClick={() => setStep(s => Math.min(4, s + 1))} className="order-2">
+                                <Button onClick={() => {
+                                    if (step === 1 && groupIdParam) {
+                                        setStep(3);
+                                    } else {
+                                        setStep(s => Math.min(4, s + 1));
+                                    }
+                                }} className="order-2">
                                     Next Step <ChevronRight className="ml-2 h-4 w-4" />
                                 </Button>
                             ) : (

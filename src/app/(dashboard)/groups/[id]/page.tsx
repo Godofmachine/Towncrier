@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, MoreHorizontal, Plus, Search, Trash2, Upload, UserPlus, Users, FileSpreadsheet } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Loader2, MoreHorizontal, Plus, Search, Trash2, Upload, UserPlus, Users, FileSpreadsheet, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -38,14 +39,15 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
     const [members, setMembers] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-    // Dialog States
     // Dialog States
     const [isAddExistingOpen, setIsAddExistingOpen] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
     const [isRemoving, setIsRemoving] = useState(false);
+    const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
 
     // Fetch Data
     const fetchData = useCallback(async () => {
@@ -72,13 +74,17 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
 
         if (memberError) {
             console.error("Error fetching members:", memberError);
-        } else {
-            // Flatten the structure
-            const flatMembers = memberData
-                .map((item: any) => item.recipients)
-                .filter((r: any) => r); // filter out nulls if any
-            setMembers(flatMembers);
+            console.error("Error details:", JSON.stringify(memberError, null, 2));
+            setIsLoading(false);
+            return;
         }
+
+        // Flatten the structure
+        const flatMembers = memberData
+            ?.map((item: any) => item.recipients)
+            .filter((r: any) => r) || [];
+
+        setMembers(flatMembers);
         setIsLoading(false);
     }, [groupId, router, supabase]);
 
@@ -86,6 +92,24 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
         fetchData();
     }, [fetchData]);
 
+
+    const toggleSelection = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const toggleAll = () => {
+        if (selectedIds.size === filteredMembers.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredMembers.map(m => m.id)));
+        }
+    };
 
     const handleRemoveMember = async () => {
         if (!removingMemberId) return;
@@ -105,6 +129,26 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
         }
         setIsRemoving(false);
         setRemovingMemberId(null);
+    };
+
+    const handleBulkRemove = async () => {
+        setIsRemoving(true);
+
+        const { error } = await supabase
+            .from('group_members')
+            .delete()
+            .eq('group_id', groupId)
+            .in('recipient_id', Array.from(selectedIds));
+
+        if (error) {
+            toast.error("Failed to remove members");
+        } else {
+            toast.success(`Removed ${selectedIds.size} member(s)`);
+            setMembers(prev => prev.filter(m => !selectedIds.has(m.id)));
+            setSelectedIds(new Set());
+        }
+        setIsRemoving(false);
+        setIsBulkConfirmOpen(false);
     };
 
     const handleCreateContactSuccess = async (newContact: any) => {
@@ -158,6 +202,17 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {selectedIds.size > 0 && (
+                            <Button variant="destructive" size="sm" onClick={() => setIsBulkConfirmOpen(true)}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Remove ({selectedIds.size})
+                            </Button>
+                        )}
+                        <Button variant="outline" asChild>
+                            <Link href={`/campaigns/new?groupId=${groupId}`}>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Send Campaign
+                            </Link>
+                        </Button>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button>
@@ -199,33 +254,53 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[40px]">
+                                    <Checkbox
+                                        checked={filteredMembers.length > 0 && selectedIds.size === filteredMembers.length}
+                                        onCheckedChange={toggleAll}
+                                    />
+                                </TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Added</TableHead>
+                                <TableHead>Custom Fields</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                                     </TableCell>
                                 </TableRow>
                             ) : filteredMembers.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                                         No members in this group.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 filteredMembers.map((member) => (
                                     <TableRow key={member.id}>
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={selectedIds.has(member.id)}
+                                                onCheckedChange={() => toggleSelection(member.id)}
+                                            />
+                                        </TableCell>
                                         <TableCell className="font-medium">{member.first_name} {member.last_name}</TableCell>
                                         <TableCell>{member.email}</TableCell>
-                                        <TableCell className="text-muted-foreground text-xs">
-                                            {/* We don't have joined_at in flat object easily unless we queried it. Use recipient created_at for now or skip */}
-                                            -
+                                        <TableCell>
+                                            <div className="flex gap-1 flex-wrap max-w-[200px]">
+                                                {member.custom_fields && Object.keys(member.custom_fields).slice(0, 3).map((key: string) => (
+                                                    <Badge key={key} variant="outline" className="text-[10px] bg-muted/50 font-normal">
+                                                        {key}: {member.custom_fields[key]}
+                                                    </Badge>
+                                                ))}
+                                                {member.custom_fields && Object.keys(member.custom_fields).length > 3 && (
+                                                    <span className="text-[10px] text-muted-foreground">+{Object.keys(member.custom_fields).length - 3} more</span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button
@@ -258,6 +333,17 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
                 title="Remove Member?"
                 description="Are you sure you want to remove this person from the group? This will not delete the contact from your database."
                 onConfirm={handleRemoveMember}
+                isLoading={isRemoving}
+                variant="destructive"
+                confirmText="Remove"
+            />
+
+            <ConfirmDialog
+                open={isBulkConfirmOpen}
+                onOpenChange={setIsBulkConfirmOpen}
+                title="Remove Members?"
+                description={`Are you sure you want to remove ${selectedIds.size} member(s) from this group? This will not delete the contacts from your database.`}
+                onConfirm={handleBulkRemove}
                 isLoading={isRemoving}
                 variant="destructive"
                 confirmText="Remove"

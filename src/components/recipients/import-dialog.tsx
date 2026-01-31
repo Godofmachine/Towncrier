@@ -75,7 +75,7 @@ export function ImportDialog({ children, groupId, onSuccess, open, onOpenChange 
                     status: 'active',
                     updated_at: new Date().toISOString(),
                     user_id: user.id
-                })), { onConflict: 'email' })
+                })), { onConflict: 'user_id, email' })
                 .select('id, email');
 
             if (recipientsError) throw recipientsError;
@@ -167,8 +167,8 @@ export function ImportDialog({ children, groupId, onSuccess, open, onOpenChange 
                         <div className="flex justify-center mt-4">
                             <Button variant="outline" size="sm" className="gap-2" onClick={(e) => {
                                 e.stopPropagation();
-                                const headers = "email,first_name,last_name,company,role\n";
-                                const example = "john@example.com,John,Doe,Acme Inc,Manager";
+                                const headers = "email,first_name,last_name,company,role,city,phone\n";
+                                const example = "john@example.com,John,Doe,Acme Inc,Manager,New York,555-0123";
                                 const blob = new Blob([headers + example], { type: 'text/csv' });
                                 const url = window.URL.createObjectURL(blob);
                                 const a = document.createElement('a');

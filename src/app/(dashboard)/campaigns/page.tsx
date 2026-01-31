@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreHorizontal, Loader2, Copy, Pencil } from "lucide-react";
+import { Plus, MoreHorizontal, Loader2, Copy, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,25 +23,71 @@ import {
 } from "@/components/ui/table";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function CampaignsPage() {
     const [campaigns, setCampaigns] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const supabase = createClient();
 
-    useEffect(() => {
-        const fetchCampaigns = async () => {
-            setIsLoading(true);
-            const { data } = await supabase
-                .from('campaigns')
-                .select('*')
-                .order('created_at', { ascending: false });
+    const fetchCampaigns = async () => {
+        setIsLoading(true);
+        const { data } = await supabase
+            .from('campaigns')
+            .select('*')
+            .neq('status', 'archived') // Exclude soft-deleted
+            .order('created_at', { ascending: false });
 
-            if (data) setCampaigns(data);
-            setIsLoading(false);
-        };
+        if (data) setCampaigns(data);
+        setIsLoading(false);
+        setSelectedIds(new Set()); // Reset selection
+    };
+
+    useEffect(() => {
         fetchCampaigns();
     }, []);
+
+    const handleSelectAll = (checked: boolean, tab: string) => {
+        if (checked) {
+            // Only select items visible in the current tab
+            const visibleCampaigns = campaigns.filter(c => tab === 'all' || c.status === tab);
+            setSelectedIds(new Set(visibleCampaigns.map(c => c.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectOne = (id: string, checked: boolean) => {
+        const newSet = new Set(selectedIds);
+        if (checked) newSet.add(id);
+        else newSet.delete(id);
+        setSelectedIds(newSet);
+    };
+
+    const handleBulkDelete = async () => {
+        setIsDeleting(true);
+        try {
+            // Soft delete: set status to 'archived'
+            const { error } = await supabase
+                .from('campaigns')
+                .update({ status: 'archived' })
+                .in('id', Array.from(selectedIds));
+
+            if (error) throw error;
+
+            toast.success(`Deleted ${selectedIds.size} campaign(s)`);
+            fetchCampaigns();
+            setShowDeleteConfirm(false);
+        } catch (error: any) {
+            toast.error("Failed to delete campaigns");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -59,12 +106,20 @@ export default function CampaignsPage() {
                         Create, schedule, and track your email blasts.
                     </p>
                 </div>
-                <Button asChild>
-                    <Link href="/campaigns/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Campaign
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    {selectedIds.size > 0 && (
+                        <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete ({selectedIds.size})
+                        </Button>
+                    )}
+                    <Button asChild>
+                        <Link href="/campaigns/new">
+                            <Plus className="mr-2 h-4 w-4" />
+                            New Campaign
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             <Card>
@@ -77,43 +132,57 @@ export default function CampaignsPage() {
                             <TabsTrigger value="scheduled" className="shrink-0 snap-start">Scheduled</TabsTrigger>
                         </TabsList>
 
-                        {["all", "sent", "draft", "scheduled"].map((tab) => (
-                            <TabsContent key={tab} value={tab}>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Campaign Name</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Recipients</TableHead>
-                                            <TableHead>Open Rate</TableHead>
-                                            <TableHead className="text-right">Date</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {isLoading ? (
+                        {["all", "sent", "draft", "scheduled"].map((tab) => {
+                            const filteredCampaigns = campaigns.filter(c => tab === 'all' || c.status === tab);
+                            const isAllSelected = filteredCampaigns.length > 0 && filteredCampaigns.every(c => selectedIds.has(c.id));
+
+                            return (
+                                <TabsContent key={tab} value={tab}>
+                                    <Table>
+                                        <TableHeader>
                                             <TableRow>
-                                                <TableCell colSpan={6} className="h-24 text-center">
-                                                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                                                </TableCell>
+                                                <TableHead className="w-[50px]">
+                                                    <Checkbox
+                                                        checked={filteredCampaigns.length > 0 && isAllSelected}
+                                                        onCheckedChange={(checked) => handleSelectAll(!!checked, tab)}
+                                                    />
+                                                </TableHead>
+                                                <TableHead>Campaign Name</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Recipients</TableHead>
+                                                <TableHead>Open Rate</TableHead>
+                                                <TableHead className="text-right">Date</TableHead>
+                                                <TableHead className="w-[50px]"></TableHead>
                                             </TableRow>
-                                        ) : campaigns.filter(c => tab === 'all' || c.status === tab).length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                                    No {tab === 'all' ? '' : tab} campaigns found.
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            campaigns
-                                                .filter(c => tab === 'all' || c.status === tab)
-                                                .map((c) => (
+                                        </TableHeader>
+                                        <TableBody>
+                                            {isLoading ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} className="h-24 text-center">
+                                                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : filteredCampaigns.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                                        No {tab === 'all' ? '' : tab} campaigns found.
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                filteredCampaigns.map((c) => (
                                                     <TableRow key={c.id}>
+                                                        <TableCell>
+                                                            <Checkbox
+                                                                checked={selectedIds.has(c.id)}
+                                                                onCheckedChange={(checked) => handleSelectOne(c.id, !!checked)}
+                                                            />
+                                                        </TableCell>
                                                         <TableCell>
                                                             <div className="font-medium">{c.name}</div>
                                                             <div className="text-xs text-muted-foreground truncate max-w-[200px]">{c.subject || '(No subject)'}</div>
                                                         </TableCell>
                                                         <TableCell>{getStatusBadge(c.status)}</TableCell>
-                                                        <TableCell>{c.recipients_count || '-'}</TableCell>
+                                                        <TableCell>{c.total_recipients || c.recipients_count || '-'}</TableCell>
                                                         <TableCell>{c.open_rate ? `${c.open_rate}%` : '-'}</TableCell>
                                                         <TableCell className="text-right text-muted-foreground text-sm">
                                                             {new Date(c.created_at).toLocaleDateString()}
@@ -140,20 +209,40 @@ export default function CampaignsPage() {
                                                                             <Copy className="mr-2 h-4 w-4" /> Reuse / Duplicate
                                                                         </Link>
                                                                     </DropdownMenuItem>
-                                                                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive"
+                                                                        onClick={() => {
+                                                                            setSelectedIds(new Set([c.id]));
+                                                                            setShowDeleteConfirm(true);
+                                                                        }}
+                                                                    >
+                                                                        Delete
+                                                                    </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </TabsContent>
-                        ))}
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TabsContent>
+                            );
+                        })}
                     </Tabs>
                 </CardContent>
             </Card>
+
+            <ConfirmDialog
+                open={showDeleteConfirm}
+                onOpenChange={setShowDeleteConfirm}
+                title={`Delete ${selectedIds.size} Campaign(s)?`}
+                description="These campaigns will be moved to archive and removed from this list. Analytics data will be preserved."
+                confirmText="Delete"
+                variant="destructive"
+                isLoading={isDeleting}
+                onConfirm={handleBulkDelete}
+            />
         </div>
     );
 }

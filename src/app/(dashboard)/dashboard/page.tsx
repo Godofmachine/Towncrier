@@ -8,8 +8,12 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays, formatDistanceToNow } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ImportDialog } from "@/components/recipients/import-dialog";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+    const router = useRouter();
     const [stats, setStats] = useState({
         recipients: 0,
         groups: 0,
@@ -25,6 +29,7 @@ export default function DashboardPage() {
     const [chartData, setChartData] = useState<any[]>([]);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -46,10 +51,11 @@ export default function DashboardPage() {
             // 2. Profile (Quota & Connection)
             const { data: profile } = await supabase.from('profiles').select('emails_sent_today, gmail_connected').eq('id', user.id).single();
 
-            // 3. Analytic Stats
+            // 3. Analytic Stats (Exclude drafts)
             const { data: campaigns } = await supabase
                 .from('campaigns')
-                .select('stats_sent, stats_opened, stats_clicked, stats_bounced');
+                .select('stats_sent, stats_opened, stats_clicked, stats_bounced')
+                .neq('status', 'draft');
 
             let totalSent = 0, openRate = 0, clickRate = 0, bounceRate = 0;
 
@@ -147,11 +153,28 @@ export default function DashboardPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button asChild variant="outline">
-                        <Link href="/recipients/new">
-                            <Plus className="mr-2 h-4 w-4" /> Add Recipient
-                        </Link>
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline">
+                                <Plus className="mr-2 h-4 w-4" /> Add Recipient
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => router.push('/recipients/new')}>
+                                Manually Add
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsImportOpen(true)}>
+                                Import CSV
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <ImportDialog
+                        open={isImportOpen}
+                        onOpenChange={setIsImportOpen}
+                        onSuccess={() => window.location.reload()}
+                    />
+
                     <Button asChild>
                         <Link href="/campaigns/new">
                             <Plus className="mr-2 h-4 w-4" /> New Campaign
