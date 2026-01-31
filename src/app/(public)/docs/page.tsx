@@ -28,7 +28,7 @@ export default function DocsPage() {
 
             <Tabs defaultValue="getting-started" className="space-y-8">
                 <div className="border-b">
-                    <TabsList className="h-auto w-auto bg-transparent p-0 gap-6 flex-wrap justify-start">
+                    <TabsList className="!h-auto w-auto bg-transparent p-0 gap-4 md:gap-6 flex-wrap justify-start">
                         <TabsTrigger
                             value="getting-started"
                             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 font-medium"
