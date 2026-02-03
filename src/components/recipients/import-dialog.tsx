@@ -95,9 +95,7 @@ export function ImportDialog({ children, groupId, onSuccess, open, onOpenChange 
             }
 
             toast.success(`Successfully imported ${parseResult.contacts.length} contacts`);
-            toast.success(`Successfully imported ${parseResult.contacts.length} contacts`);
             handleOpenChange(false);
-            setStep("upload");
             setStep("upload");
             setParseResult(null);
             onSuccess?.();

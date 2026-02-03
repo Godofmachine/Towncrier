@@ -79,10 +79,7 @@ export function QuickAddRecipientDialog({ onSuccess, children, open, onOpenChang
 
             toast.success("Recipient added successfully");
             onSuccess(data);
-            toast.success("Recipient added successfully");
-            onSuccess(data);
             handleOpenChange(false);
-            setFormData({ email: "", first_name: "", last_name: "" });
             setFormData({ email: "", first_name: "", last_name: "" });
             setCustomFields([{ key: "company", value: "" }]); // Reset
         } catch (error: any) {

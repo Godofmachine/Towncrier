@@ -130,21 +130,21 @@ function SettingsContent() {
     };
 
     const handleDisconnect = async () => {
-        // Call API to remove tokens
-        // For MVP, simplistic update
-        // In real app, call DELETE /api/gmail/token
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ gmail_connected: false, gmail_email: null })
-                .eq('id', profile.id);
+            const res = await fetch('/api/gmail/disconnect', {
+                method: 'POST'
+            });
 
-            if (error) throw error;
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to disconnect");
+            }
 
             setGmailConnected(false);
+            setProfile((prev: any) => ({ ...prev, gmail_email: null, gmail_connected: false }));
             toast.success("Gmail disconnected");
-        } catch (e) {
-            toast.error("Failed to disconnect");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to disconnect");
         }
     };
 

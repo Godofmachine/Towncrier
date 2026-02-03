@@ -55,19 +55,21 @@ export async function getGmailClient(userId: string) {
             const { encryptToken } = await import('@/lib/crypto/encryption');
 
             const encryptedAccessToken = encryptToken(tokens.access_token);
-            const encryptedRefreshToken = tokens.refresh_token ? encryptToken(tokens.refresh_token) : null;
-
-            await supabaseAdmin.from("gmail_tokens").update({
-                // Keep old columns for backward compatibility
+            const payload: any = {
                 access_token: tokens.access_token,
-                refresh_token: tokens.refresh_token || null,
-                // New encrypted columns
                 encrypted_access_token: encryptedAccessToken,
-                encrypted_refresh_token: encryptedRefreshToken,
                 is_encrypted: true,
                 token_expiry: new Date(tokens.expiry_date || Date.now() + 3600000).toISOString(),
                 updated_at: new Date().toISOString()
-            }).eq("user_id", userId);
+            };
+
+            // Only update refresh token if a new one is returned
+            if (tokens.refresh_token) {
+                payload.refresh_token = tokens.refresh_token;
+                payload.encrypted_refresh_token = encryptToken(tokens.refresh_token);
+            }
+
+            await supabaseAdmin.from("gmail_tokens").update(payload).eq("user_id", userId);
         }
     });
 

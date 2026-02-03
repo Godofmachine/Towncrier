@@ -40,18 +40,24 @@ function validateEmailContent(content: string, subject: string) {
 }
 
 // SECURITY: Sanitize HTML content to prevent XSS
+import sanitizeHtml from 'sanitize-html';
+
+// SECURITY: Sanitize HTML content to prevent XSS
 async function sanitizeHTML(html: string): Promise<string> {
-    const DOMPurify = (await import('isomorphic-dompurify')).default;
-    return DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: [
+    return sanitizeHtml(html, {
+        allowedTags: [
             'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'blockquote', 'code', 'pre', 'img', 'hr', 'table', 'thead',
             'tbody', 'tr', 'td', 'th', 'div', 'span'
         ],
-        ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'style', 'class', 'id', 'width', 'height'],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false
+        allowedAttributes: {
+            '*': ['style', 'class', 'id', 'title', 'width', 'height'],
+            'a': ['href', 'target'],
+            'img': ['src', 'alt']
+        },
+        allowedSchemes: ['http', 'https', 'mailto', 'data'],
+        allowProtocolRelative: false
     });
 }
 
