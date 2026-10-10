@@ -15,13 +15,13 @@ export async function POST(req: Request) {
 
         // Smart model selection based on tone
         const modelMap = {
-            'persuasive': 'llama-3.3-70b-versatile',    // 70B for creative, sales-focused emails (1K/day)
-            'friendly': 'llama-3.1-8b-instant',         // 8B for casual emails (14.4K/day)
-            'formal': 'llama-3.1-8b-instant',           // 8B for corporate emails (14.4K/day)
-            'neutral': 'llama-3.1-8b-instant'           // 8B for standard professional (14.4K/day)
+            'persuasive': 'qwen/qwen3.8-27b',
+            'friendly': 'qwen/qwen3.8-27b',
+            'formal': 'qwen/qwen3.8-27b',
+            'neutral': 'qwen/qwen3.8-27b'
         };
 
-        const selectedModel = modelMap[tone as keyof typeof modelMap] || 'llama-3.1-8b-instant';
+        const selectedModel = modelMap[tone as keyof typeof modelMap] || 'qwen/qwen3.8-27b';
 
         let systemPrompt = "";
 
@@ -104,14 +104,14 @@ export async function POST(req: Request) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Groq API Error (${selectedModel}):`, errorText);
-
-            // Fallback to 8B model if 70B is rate-limited
-            if (response.status === 429 && selectedModel === 'llama-3.3-70b-versatile') {
-                console.log("Rate limited on 70B, trying fallback to 8B model...");
-                return fallbackTo8BModel(apiKey, systemPrompt, tone, type);
-            }
-
-            throw new Error(`AI Request Failed: ${response.status}`);
+            let errorMsg = `AI Request Failed: ${response.status}`;
+            try {
+                const errJson = JSON.parse(errorText);
+                if (errJson?.error?.message) {
+                    errorMsg = errJson.error.message;
+                }
+            } catch {}
+            throw new Error(errorMsg);
         }
 
         const data = await response.json();
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
 }
 
 // Fallback function for rate limiting
-async function fallbackTo8BModel(apiKey: string, systemPrompt: string, tone: string, type: string) {
+async function fallbackToFastModel(apiKey: string, systemPrompt: string, tone: string, type: string) {
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
@@ -145,7 +145,7 @@ async function fallbackTo8BModel(apiKey: string, systemPrompt: string, tone: str
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                "model": "llama-3.1-8b-instant",
+                "model": "qwen/qwen3.8-27b",
                 "messages": [
                     { "role": "system", "content": systemPrompt },
                     { "role": "user", "content": "Generate the content now." }
@@ -165,7 +165,7 @@ async function fallbackTo8BModel(apiKey: string, systemPrompt: string, tone: str
 
         return NextResponse.json({
             content,
-            model: "llama-3.1-8b-instant (fallback)"
+            model: "qwen/qwen3.8-27b (fallback)"
         });
     } catch (error: any) {
         throw new Error(`Both primary and fallback models failed: ${error.message}`);
