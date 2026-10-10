@@ -74,6 +74,7 @@ export async function POST(req: Request) {
                    7. Keep paragraphs concise and scannable
                    8. End with a clear call-to-action when appropriate
                    9. Sign off using the provided 'From Name': ${fromName || "[Your Name]"}
+                   10. Do NOT insert blank lines, extra <br>, or empty paragraphs between <p> tags. Separate paragraphs cleanly using <p> tags only.
                    
                    Tone Style Guide:
                    ${tone === 'persuasive' ? '- Use compelling language and emotional triggers\\n- Include strong CTAs\\n- Focus on benefits and urgency' : ''}
@@ -117,12 +118,15 @@ export async function POST(req: Request) {
         const data = await response.json();
         let content = data.choices[0]?.message?.content || "";
 
-        // Aggressive cleanup to ensure only HTML output
+        // Aggressive cleanup to ensure only clean HTML output without phantom empty paragraphs
         content = content
-            .replace(/```html/g, '')
+            .replace(/```html/gi, '')
             .replace(/```/g, '')
             .replace(/^\s*["'`]/g, '')  // Remove leading quotes
             .replace(/["'`]\s*$/g, '')  // Remove trailing quotes
+            .replace(/<p>\s*(?:<br\s*\/?>)?\s*<\/p>/gi, '') // Remove empty paragraphs
+            .replace(/<\/p>\s*<br\s*\/?>\s*<p>/gi, '</p><p>') // Remove stray br between p tags
+            .replace(/>\s*\n+\s*</g, '><') // Remove newlines between tags
             .trim();
 
         return NextResponse.json({

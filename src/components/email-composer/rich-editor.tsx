@@ -78,13 +78,28 @@ export function RichEditor({ content, onChange, onSubjectGenerate, onAttach, onI
     }, [content, editor]);
 
     const handleAiInsert = (newContent: string) => {
-        editor?.commands.insertContent(newContent);
+        if (!editor) return;
+
+        // Clean redundant empty paragraphs, stray line-breaks, and inter-tag newlines
+        const cleanContent = newContent
+            .replace(/```html/gi, '')
+            .replace(/```/g, '')
+            .replace(/<p>\s*(?:<br\s*\/?>)?\s*<\/p>/gi, '')
+            .replace(/<\/p>\s*<br\s*\/?>\s*<p>/gi, '</p><p>')
+            .replace(/>\s*\n+\s*</g, '><')
+            .trim();
+
+        if (editor.isEmpty) {
+            editor.commands.setContent(cleanContent);
+        } else {
+            editor.commands.insertContent(cleanContent);
+        }
     };
 
     return (
         <div className="flex flex-col md:flex-row min-h-[500px] md:h-[600px] border rounded-md overflow-hidden bg-background relative">
             <div className="flex-1 flex flex-col min-w-0 h-full">
-                <div className="flex justify-between items-center bg-muted/20 pr-2 flex-wrap gap-2 md:gap-0">
+                <div className="flex justify-between items-center bg-muted/20 pr-2 flex-wrap gap-2 md:gap-0 border-b border-border">
                     <Toolbar editor={editor} onAttach={onAttach} onImage={onImage} variables={variables} />
                     {!showAi && (
                         <Button variant="ghost" size="sm" onClick={() => setShowAi(true)} className="text-purple-600 ml-auto" type="button">

@@ -169,7 +169,7 @@
 
 /* Typography Elements */
 .prose p {
-  @apply leading-7 [&:not(:first-child)]:mt-4;
+  @apply leading-relaxed [&:not(:first-child)]:mt-3;
 }
 
 .prose blockquote {

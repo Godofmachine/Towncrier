@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Loader2, Wand2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -243,27 +244,31 @@ export function AiAssistant({ onInsert, onSubjectGenerate, fromName, currentEdit
                             </CardContent>
                         </Card>
 
-                        {/* Refine Result Input (Only show if we are NOT already in refinement mode main input, to avoid confusion? 
-                            Actually, allow refining the result further is good.) */}
-                        <div className="flex gap-2">
-                            <Textarea
-                                placeholder="Refine this specific result further..."
-                                className="h-[38px] min-h-[38px] resize-none py-2 text-xs"
+                        {/* Refine Result Input */}
+                        <div className="flex gap-1.5 items-center">
+                            <Input
+                                placeholder="Refine this result further..."
+                                className="h-8 text-xs px-2.5 placeholder:text-[11px] placeholder:text-muted-foreground flex-1"
                                 value={mode === 'refine' ? "" : refinementInstruction}
                                 onChange={(e) => mode !== 'refine' && setRefinementInstruction(e.target.value)}
-                                disabled={mode === 'refine'} // Disable this mini-input if main input is the refinement one? 
-                            // Actually, better UX: reuse the main input for 'Polish' mode. 
-                            // But for 'Draft' mode, we need this mini-input.
-                            // Let's keep it simple: formatting allows refining the *Result*.
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (refinementInstruction.trim() && !isLoading && mode !== 'refine') {
+                                            handleGenerate('body', true);
+                                        }
+                                    }
+                                }}
+                                disabled={mode === 'refine' || isLoading}
                             />
                             <Button
                                 size="icon"
+                                className="h-8 w-8 shrink-0"
                                 onClick={() => handleGenerate('body', true)}
-                                disabled={isLoading || (mode !== 'refine' && !refinementInstruction.trim())} // Logic gets complex.
-                                // Simplified: If in Refine Mode, 'Generate' button does the work. This mini-bar is for iterative improvements on HISTORY items.
+                                disabled={isLoading || (mode !== 'refine' && !refinementInstruction.trim())}
                                 title="Refine This Result"
                             >
-                                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                             </Button>
                         </div>
 
