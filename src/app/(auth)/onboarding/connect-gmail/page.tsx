@@ -19,7 +19,7 @@ export default function ConnectGmailPage() {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    scopes: 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly',
+                    scopes: 'https://www.googleapis.com/auth/gmail.send',
                     redirectTo: `${location.origin}/auth/callback?next=/dashboard`,
                     queryParams: {
                         access_type: 'offline',
@@ -73,7 +73,10 @@ export default function ConnectGmailPage() {
                         </div>
                     </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-4">
+                <CardFooter className="flex flex-col gap-3">
+                    <p className="text-[11px] text-muted-foreground text-center px-2">
+                        If Google displays <em>&quot;Google hasn&apos;t verified this app&quot;</em>, click <strong>Advanced</strong> &rarr; <strong>Go to The Towncrier</strong> to continue.
+                    </p>
                     <Button size="lg" className="w-full" onClick={handleConnect} disabled={isLoading}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
                         Connect Gmail Account
