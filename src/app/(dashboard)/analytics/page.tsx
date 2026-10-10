@@ -52,8 +52,12 @@ export default function AnalyticsPage() {
                 return format(d, 'MMM dd');
             });
 
-            // Mock shape for visualization plan compliance (Recharts requires data array)
-            // We will attempt to count real events if possible, but fallback to 0s
+            // Fetch recent campaigns to backfill 'Sent' counts where events might be missing
+            const { data: recentCampaignsData } = await supabase
+                .from('campaigns')
+                .select('stats_sent, sent_at')
+                .gte('sent_at', subDays(today, 7).toISOString());
+
             const { data: events } = await supabase
                 .from('email_events')
                 .select('created_at, event_type')
@@ -61,9 +65,13 @@ export default function AnalyticsPage() {
 
             const dailyData = last7Days.map(day => {
                 const dayEvents = events?.filter(e => format(new Date(e.created_at), 'MMM dd') === day) || [];
+                const dayCampaigns = recentCampaignsData?.filter(c => c.sent_at && format(new Date(c.sent_at), 'MMM dd') === day) || [];
+                const campaignsSentCount = dayCampaigns.reduce((sum, c) => sum + (c.stats_sent || 0), 0);
+                const eventsSentCount = dayEvents.filter(e => e.event_type === 'sent').length;
+
                 return {
                     name: day,
-                    sent: dayEvents.filter(e => e.event_type === 'sent').length,
+                    sent: Math.max(campaignsSentCount, eventsSentCount),
                     opened: dayEvents.filter(e => e.event_type === 'opened').length,
                     clicked: dayEvents.filter(e => e.event_type === 'clicked').length
                 };

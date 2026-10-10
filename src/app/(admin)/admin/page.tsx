@@ -112,39 +112,78 @@ export default function AdminDashboardPage() {
                 // Admin cares about total volume
                 return {
                     name: day,
-                    activity: dayEvents.length, // Activity generally implies interaction (opens/clicks) + sends. 
-                    // If we have "phantom" sends from campaigns, we should probably add them to activity score?
-                    // For now, let's keep activity as "Events logged" but fix 'sent'.
-                    // Actually, if we correct 'sent', we should probably bump activity too if it's lagging.
+                    activity: Math.max(dayEvents.length, campaignsSentCount),
                     sent: Math.max(campaignsSentCount, eventsSentCount)
                 };
             });
             setChartData(dailyData);
 
             // 4. Recent Activity Summary (Privacy-Safe - No campaign names or user data)
-            const { count: recentSentCount } = await supabase
+            const twentyFourHoursAgo = subDays(today, 1).toISOString();
+
+            // 4a. Count from email_events
+            const { count: recentSentEvents } = await supabase
                 .from('email_events')
                 .select('*', { count: 'exact', head: true })
                 .eq('event_type', 'sent')
-                .gte('created_at', subDays(today, 1).toISOString());
+                .gte('created_at', twentyFourHoursAgo);
 
-            const { count: recentOpenCount } = await supabase
+            const { count: recentOpenEvents } = await supabase
                 .from('email_events')
                 .select('*', { count: 'exact', head: true })
                 .eq('event_type', 'opened')
-                .gte('created_at', subDays(today, 1).toISOString());
+                .gte('created_at', twentyFourHoursAgo);
 
-            const { count: recentClickCount } = await supabase
+            const { count: recentClickEvents } = await supabase
                 .from('email_events')
                 .select('*', { count: 'exact', head: true })
                 .eq('event_type', 'clicked')
-                .gte('created_at', subDays(today, 1).toISOString());
+                .gte('created_at', twentyFourHoursAgo);
+
+            // 4b. Count from campaign_recipients for granular delivery records
+            const { count: recentRecipientsSent } = await supabase
+                .from('campaign_recipients')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'sent')
+                .gte('sent_at', twentyFourHoursAgo);
+
+            const { count: recentRecipientsOpened } = await supabase
+                .from('campaign_recipients')
+                .select('*', { count: 'exact', head: true })
+                .gte('opened_at', twentyFourHoursAgo);
+
+            // 4c. Count from campaigns aggregate stats
+            const { data: recentCampaigns24h } = await supabase
+                .from('campaigns')
+                .select('stats_sent, stats_opened, stats_clicked')
+                .gte('sent_at', twentyFourHoursAgo);
+
+            const campaignsSent24h = recentCampaigns24h?.reduce((sum, c) => sum + (c.stats_sent || 0), 0) || 0;
+            const campaignsOpened24h = recentCampaigns24h?.reduce((sum, c) => sum + (c.stats_opened || 0), 0) || 0;
+            const campaignsClicked24h = recentCampaigns24h?.reduce((sum, c) => sum + (c.stats_clicked || 0), 0) || 0;
+
+            const finalSent24h = Math.max(
+                recentSentEvents || 0,
+                recentRecipientsSent || 0,
+                campaignsSent24h
+            );
+
+            const finalOpened24h = Math.max(
+                recentOpenEvents || 0,
+                recentRecipientsOpened || 0,
+                campaignsOpened24h
+            );
+
+            const finalClicked24h = Math.max(
+                recentClickEvents || 0,
+                campaignsClicked24h
+            );
 
             // Set anonymized recent activity (last 24h)
             const anonymizedActivity = [
-                { id: '1', event: 'Emails Sent', count: recentSentCount || 0, time: 'Last 24h', type: 'success' },
-                { id: '2', event: 'Emails Opened', count: recentOpenCount || 0, time: 'Last 24h', type: 'success' },
-                { id: '3', event: 'Links Clicked', count: recentClickCount || 0, time: 'Last 24h', type: 'success' },
+                { id: '1', event: 'Emails Sent', count: finalSent24h, time: 'Last 24h', type: 'success' },
+                { id: '2', event: 'Emails Opened', count: finalOpened24h, time: 'Last 24h', type: 'success' },
+                { id: '3', event: 'Links Clicked', count: finalClicked24h, time: 'Last 24h', type: 'success' },
             ];
             setRecentSystemEvents(anonymizedActivity);
 

@@ -256,6 +256,20 @@ export async function sendCampaign({
                 }).eq('id', trackingId);
             }
 
+            // Log event to email_events for real-time telemetry
+            if (activeCampaignId) {
+                try {
+                    await supabaseAdmin.from('email_events').insert({
+                        campaign_id: activeCampaignId,
+                        recipient_id: recipient.id || null,
+                        event_type: 'sent',
+                        created_at: new Date().toISOString()
+                    });
+                } catch (eventErr) {
+                    console.error("Failed to insert sent email_event:", eventErr);
+                }
+            }
+
             // SECURITY: Add delay between sends to avoid Gmail spam detection
             // 100ms delay = max 10 emails/second, well under Gmail's limits
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -274,7 +288,8 @@ export async function sendCampaign({
     // 6. Update Final Campaign Status and Usage Counter
     await supabaseAdmin.from('campaigns').update({
         status: 'sent',
-        stats_sent: sentCount
+        stats_sent: sentCount,
+        sent_at: new Date().toISOString()
     }).eq('id', activeCampaignId);
 
     // SECURITY: Update daily usage counter
